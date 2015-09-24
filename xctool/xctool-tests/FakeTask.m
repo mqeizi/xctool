@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,14 +30,27 @@ static void writeAll(int fildes, const void *buf, size_t nbyte) {
   }
 }
 
-@implementation FakeTask
+@interface FakeTask ()
+@property (atomic, assign, readwrite) int terminationStatus;
+@end
+
+@implementation FakeTask {
+  pid_t _forkedPid;
+}
+@synthesize currentDirectoryPath = _currentDirectoryPath;
+@synthesize launchPath = _launchPath;
+@synthesize arguments = _arguments;
+@synthesize environment = _environment;
+@synthesize standardOutput = _standardOutput;
+@synthesize standardError = _standardError;
+@synthesize terminationStatus = _terminationStatus;
 
 + (NSTask *)fakeTaskWithExitStatus:(int)exitStatus
                  terminationReason:(NSTaskTerminationReason)pretendTerminationReason
                 standardOutputPath:(NSString *)standardOutputPath
                  standardErrorPath:(NSString *)standardErrorPath
 {
-  FakeTask *task = [[[FakeTask alloc] init] autorelease];
+  FakeTask *task = [[FakeTask alloc] init];
   [task pretendTerminationReason:pretendTerminationReason];
   [task pretendExitStatusOf:exitStatus];
   [task pretendTaskReturnsStandardOutput:
@@ -62,16 +75,14 @@ static void writeAll(int fildes, const void *buf, size_t nbyte) {
 - (void)pretendTaskReturnsStandardOutput:(NSString *)str
 {
   if (str != _pretendStandardOutput) {
-    [_pretendStandardOutput release];
-    _pretendStandardOutput = [str retain];
+    _pretendStandardOutput = str;
   }
 }
 
 - (void)pretendTaskReturnsStandardError:(NSString *)str
 {
   if (str != _pretendStandardError) {
-    [_pretendStandardError release];
-    _pretendStandardError = [str retain];
+    _pretendStandardError = str;
   }
 }
 
@@ -85,30 +96,13 @@ static void writeAll(int fildes, const void *buf, size_t nbyte) {
   _pretendTerminationReason = reason;
 }
 
-- (NSTaskTerminationReason)terminationReason
-{
-  return _pretendTerminationReason;
-}
-
-- (id)init
+- (instancetype)init
 {
   if (self = [super init]) {
   }
   return self;
 }
 
-- (void)dealloc
-{
-  [_pretendStandardOutput release];
-  [_pretendStandardError release];
-
-  [_launchPath release];
-  [_arguments release];
-  [_environment release];
-  [_standardOutput release];
-  [_standardError release];
-  [super dealloc];
-}
 
 - (void)launch
 {
@@ -186,17 +180,19 @@ static void writeAll(int fildes, const void *buf, size_t nbyte) {
       close(standardErrorWriteFd);
     }
 
-    int pidStatus = 0;
-    waitpid(forkedPid, &pidStatus, 0);
+    _forkedPid = forkedPid;
   }
 
-  [self setTerminationStatus:_pretendExitStatus];
-  [self setIsRunning:NO];
 }
 
 - (void)waitUntilExit
 {
-  // no-op
+  int pidStatus = 0;
+  if (_forkedPid > 0) {
+    waitpid(_forkedPid, &pidStatus, 0);
+  }
+  [self setTerminationStatus:_pretendExitStatus];
+  [self setIsRunning:NO];
 }
 
 - (NSString *)description
@@ -214,6 +210,18 @@ static void writeAll(int fildes, const void *buf, size_t nbyte) {
 - (void)setStartsNewProcessGroup:(BOOL)startsNewProcessGroup
 {
   // This is part of NSConcreteTask - we're fine if it's a no-op in tests.
+}
+
+#pragma mark - Setters & Getters
+
+- (NSTaskTerminationReason)terminationReason
+{
+  return _pretendTerminationReason;
+}
+
+- (void)setTerminationReason:(NSTaskTerminationReason)terminationReason
+{
+  // empty implementation
 }
 
 @end

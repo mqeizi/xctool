@@ -1,3 +1,18 @@
+//
+// Copyright 2004-present Facebook. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 #import "Options+Testing.h"
 
@@ -5,14 +20,14 @@
 #import "FakeTaskManager.h"
 #import "LaunchHandlers.h"
 #import "ReporterTask.h"
-#import "XcodeSubjectInfo.h"
 #import "XCToolUtil.h"
+#import "XcodeSubjectInfo.h"
 
 @implementation Options (Testing)
 
 + (Options *)optionsFrom:(NSArray *)arguments
 {
-  Options *options = [[[Options alloc] init] autorelease];
+  Options *options = [[Options alloc] init];
 
   NSString *errorMessage = nil;
   [options consumeArguments:[NSMutableArray arrayWithArray:arguments]
@@ -59,7 +74,8 @@
 - (void)assertOptionsFailToValidateWithError:(NSString *)message
 {
   NSString *errorMessage = nil;
-  BOOL valid = [self validateAndReturnXcodeSubjectInfo:nil
+  XcodeSubjectInfo *xcodeSubjectInfo;
+  BOOL valid = [self validateAndReturnXcodeSubjectInfo:&xcodeSubjectInfo
                                           errorMessage:&errorMessage];
 
   if (valid) {
@@ -99,12 +115,12 @@
 
   [[FakeTaskManager sharedManager] runBlockWithFakeTasks:^{
     [[FakeTaskManager sharedManager] addLaunchHandlerBlocks:@[
-     [[^(FakeTask *task){
+     [^(FakeTask *task){
       if ([[task launchPath] hasSuffix:@"xcodebuild"] &&
           [[task arguments] containsObject:@"-showBuildSettings"]) {
         [task pretendTaskReturnsStandardOutput:contents];
       }
-    } copy] autorelease],
+    } copy],
      ]];
 
     valid = [self validateAndReturnXcodeSubjectInfo:&subjectInfo
@@ -150,6 +166,22 @@
   [self evaluateOptionsWithBuildSettingsFromFile:path
                                            valid:&valid
                                            error:&errorMessage];
+
+  if (!valid) {
+    [NSException raise:NSGenericException
+                format:
+     @"Expected validation to pass but failed with message '%@'", errorMessage];
+  }
+
+  return self;
+}
+
+- (Options *)assertOptionsValidate
+{
+  NSString *errorMessage = nil;
+  XcodeSubjectInfo *xcodeSubjectInfo = [[XcodeSubjectInfo alloc] init];
+  BOOL valid = [self validateAndReturnXcodeSubjectInfo:&xcodeSubjectInfo
+                                          errorMessage:&errorMessage];
 
   if (!valid) {
     [NSException raise:NSGenericException

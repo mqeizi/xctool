@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,9 +21,9 @@
 #import "SchemeGenerator.h"
 #import "TaskUtil.h"
 #import "Testable.h"
+#import "XCToolUtil.h"
 #import "XcodeBuildSettings.h"
 #import "XcodeSubjectInfo.h"
-#import "XCToolUtil.h"
 
 @implementation BuildTestsAction
 
@@ -35,11 +35,16 @@
 + (NSArray *)options
 {
   return @[
-  [Action actionOptionWithName:@"only"
-                       aliases:nil
-                   description:@"build only a specific test TARGET"
-                     paramName:@"TARGET"
-                         mapTo:@selector(addOnly:)],
+    [Action actionOptionWithName:@"only"
+                         aliases:nil
+                     description:@"build only a specific test TARGET"
+                       paramName:@"TARGET"
+                           mapTo:@selector(addOnly:)],
+    [Action actionOptionWithName:@"omit"
+                         aliases:nil
+                     description:@"omit building a specific test TARGET"
+                       paramName:@"TARGET"
+                           mapTo:@selector(addOmit:)],
     [Action actionOptionWithName:@"skip-deps"
                          aliases:nil
                      description:@"Only build the target, not its dependencies"
@@ -114,6 +119,8 @@
     [schemeGenerator addBuildableWithID:testable.targetID inProject:testable.projectPath];
   }
 
+  [xcodeSubjectInfo.actionScripts preBuildWithOptions:options];
+
   NSArray *xcodebuildArguments = [options commonXcodeBuildArgumentsForSchemeAction:@"TestAction"
                                                                   xcodeSubjectInfo:xcodeSubjectInfo];
   BOOL succeeded = [BuildTestsAction buildWorkspace:[schemeGenerator writeWorkspaceNamed:@"Tests"]
@@ -125,35 +132,43 @@
                                      xcodeArguments:xcodebuildArguments
                                        xcodeCommand:command];
 
+  [xcodeSubjectInfo.actionScripts postBuildWithOptions:options];
+
   if (!succeeded) {
     return NO;
   }
   return YES;
 }
 
-- (id)init
+- (instancetype)init
 {
   if (self = [super init]) {
-    self.onlyList = [NSMutableArray array];
+    _onlyList = [[NSMutableArray alloc] init];
+    _omitList = [[NSMutableArray alloc] init];
   }
   return self;
 }
 
-- (void)dealloc {
-  self.onlyList = nil;
-  [super dealloc];
-}
 
 - (void)addOnly:(NSString *)argument
 {
-  [self.onlyList addObject:argument];
+  [_onlyList addObject:argument];
+}
+
+- (void)addOmit:(NSString *)argument
+{
+  [_omitList addObject:argument];
 }
 
 - (BOOL)validateWithOptions:(Options *)options
            xcodeSubjectInfo:(XcodeSubjectInfo *)xcodeSubjectInfo
                errorMessage:(NSString **)errorMessage
 {
-  for (NSString *target in self.onlyList) {
+  if (_onlyList.count > 0 && _omitList.count > 0) {
+    *errorMessage = @"build-tests: -only and -omit cannot both be specified.";
+    return NO;
+  }
+  for (NSString *target in _onlyList) {
     if ([xcodeSubjectInfo testableWithTarget:target] == nil) {
       *errorMessage = [NSString stringWithFormat:@"build-tests: '%@' is not a testing target in this scheme.", target];
       return NO;
@@ -164,19 +179,22 @@
 }
 
 - (NSMutableArray *)buildableList:(NSArray *)buildableList
-                  matchingTargets:(NSArray *)targets
+                  matchingTargets:(NSArray *)onlyList
+                 excludingTargets:(NSArray *)omitList
 {
   NSMutableArray *result = [NSMutableArray array];
 
   for (Buildable *buildable in buildableList) {
     BOOL add;
-    if (targets.count > 0 && [[buildable.executable pathExtension] isEqualToString:@"octest"]) {
+    if (onlyList.count > 0 && [[buildable.executable pathExtension] isEqualToString:@"octest"]) {
       // If we're filtering by target, only add targets that match.
-      add = [targets containsObject:buildable.target];
+      add = [onlyList containsObject:buildable.target];
     } else if (_skipDependencies) {
       add = NO;
     } else {
-      add = !([buildable isKindOfClass:[Testable class]] && [(Testable *)buildable skipped]);
+      add = !([buildable isKindOfClass:[Testable class]] &&
+              ([(Testable *)buildable skipped] ||
+               [omitList containsObject:buildable.target]));
     }
     if (add) {
       [result addObject:buildable];
@@ -189,16 +207,16 @@
 - (BOOL)performActionWithOptions:(Options *)options xcodeSubjectInfo:(XcodeSubjectInfo *)xcodeSubjectInfo
 {
   NSArray *buildableList = [self buildableList:[xcodeSubjectInfo testablesAndBuildablesForTest]
-                               matchingTargets:self.onlyList];
-
-  if (![BuildTestsAction buildTestables:buildableList
-                                command:@"build"
-                                options:options
-                       xcodeSubjectInfo:xcodeSubjectInfo]) {
-    return NO;
+                               matchingTargets:_onlyList
+                              excludingTargets:_omitList];
+  if (!buildableList.count) {
+    return YES;
   }
 
-  return YES;
+  return [BuildTestsAction buildTestables:buildableList
+                                  command:@"build"
+                                  options:options
+                         xcodeSubjectInfo:xcodeSubjectInfo];
 }
 
 @end

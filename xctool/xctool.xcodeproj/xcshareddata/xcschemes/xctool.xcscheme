@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
-   LastUpgradeVersion = "0500"
-   version = "1.3">
+   LastUpgradeVersion = "0700"
+   version = "1.8">
    <BuildAction
       parallelizeBuildables = "NO"
       buildImplicitDependencies = "NO">
@@ -126,34 +126,6 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "283EA65916C6F9A0009CE8D3"
-               BuildableName = "mobile-installation-helper.app"
-               BlueprintName = "mobile-installation-helper"
-               ReferencedContainer = "container:../mobile-installation-helper/mobile-installation-helper.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "28AF3212182716E20051F658"
-               BuildableName = "sim-shim.dylib"
-               BlueprintName = "sim-shim"
-               ReferencedContainer = "container:../sim-shim/sim-shim.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
                BlueprintIdentifier = "283CCA4116C2EA3700F2E343"
                BuildableName = "xctool"
                BlueprintName = "xctool"
@@ -224,6 +196,20 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
+               BlueprintIdentifier = "FD023B1A1959ADA800947C28"
+               BuildableName = "teamcity"
+               BlueprintName = "teamcity"
+               ReferencedContainer = "container:../reporters/reporters.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
                BlueprintIdentifier = "28F48A3A17974EF600068E00"
                BuildableName = "json-compilation-database"
                BlueprintName = "json-compilation-database"
@@ -252,24 +238,52 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
+               BlueprintIdentifier = "CCC0AAF518EC8AC4004FD861"
+               BuildableName = "user-notifications"
+               BlueprintName = "user-notifications"
+               ReferencedContainer = "container:../reporters/reporters.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
                BlueprintIdentifier = "2893A94B17960CD400EFBD28"
-               BuildableName = "reporters-tests.octest"
+               BuildableName = "reporters-tests.xctest"
                BlueprintName = "reporters-tests"
                ReferencedContainer = "container:../reporters/reporters.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
          <BuildActionEntry
             buildForTesting = "YES"
-            buildForRunning = "YES"
+            buildForRunning = "NO"
             buildForProfiling = "YES"
             buildForArchiving = "YES"
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "283CCAC116C2EE9900F2E343"
-               BuildableName = "xctool-tests.octest"
+               BuildableName = "xctool-tests.xctest"
                BlueprintName = "xctool-tests"
                ReferencedContainer = "container:xctool.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "CCFC5E1F1B433C1B00C03A8A"
+               BuildableName = "otest-shim-tests.xctest"
+               BlueprintName = "otest-shim-tests"
+               ReferencedContainer = "container:../otest-shim/otest-shim.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -285,7 +299,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "283CCAC116C2EE9900F2E343"
-               BuildableName = "xctool-tests.octest"
+               BuildableName = "xctool-tests.xctest"
                BlueprintName = "xctool-tests"
                ReferencedContainer = "container:xctool.xcodeproj">
             </BuildableReference>
@@ -295,9 +309,19 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "2893A94B17960CD400EFBD28"
-               BuildableName = "reporters-tests.octest"
+               BuildableName = "reporters-tests.xctest"
                BlueprintName = "reporters-tests"
                ReferencedContainer = "container:../reporters/reporters.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "CCFC5E1F1B433C1B00C03A8A"
+               BuildableName = "otest-shim-tests.xctest"
+               BlueprintName = "otest-shim-tests"
+               ReferencedContainer = "container:../otest-shim/otest-shim.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -316,7 +340,14 @@
             value = "$(XT_INSTALL_ROOT)"
             isEnabled = "YES">
          </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "OBJC_DISABLE_GC"
+            value = "YES"
+            isEnabled = "YES">
+         </EnvironmentVariable>
       </EnvironmentVariables>
+      <AdditionalOptions>
+      </AdditionalOptions>
    </TestAction>
    <LaunchAction
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
@@ -326,8 +357,10 @@
       buildConfiguration = "Debug"
       ignoresPersistentStateOnLaunch = "NO"
       debugDocumentVersioning = "YES"
+      debugServiceExtension = "internal"
       allowLocationSimulation = "YES">
-      <BuildableProductRunnable>
+      <BuildableProductRunnable
+         runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "283CCA4116C2EA3700F2E343"
@@ -345,6 +378,15 @@
       useCustomWorkingDirectory = "NO"
       buildConfiguration = "Release"
       debugDocumentVersioning = "YES">
+      <MacroExpansion>
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "CD9048FD1756C5B1006CF16D"
+            BuildableName = "otest-query-ios"
+            BlueprintName = "otest-query-ios"
+            ReferencedContainer = "container:../otest-query/otest-query.xcodeproj">
+         </BuildableReference>
+      </MacroExpansion>
    </ProfileAction>
    <AnalyzeAction
       buildConfiguration = "Debug">

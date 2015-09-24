@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,8 +23,12 @@ int main(int argc, const char * argv[])
   @autoreleasepool {
     Class cls = {0};
 
-    if (strcmp(getprogname(), "pretty") == 0 && isatty(STDOUT_FILENO)) {
-      cls = [PrettyTextReporter class];
+    if (strcmp(getprogname(), "pretty") == 0) {
+      if (isatty(STDOUT_FILENO) || NSProcessInfo.processInfo.environment[@"XCTOOL_FORCE_TTY"]) {
+        cls = [PrettyTextReporter class];
+      } else {
+        cls = [NoOverwritePrettyTextReporter class];
+      }
     } else {
       cls = [PlainTextReporter class];
     }

@@ -17,28 +17,6 @@ for continuous integration.
 __xctool__ is drop-in replacement for xcodebuild that adds a few extra
 features:
 
-* **Runs the same tests as Xcode.app.**
-
-  Surprisingly, Apple's command-line _xcodebuild_ tool does not run your
-product's tests the same way as _Xcode.app_.  xcodebuild doesn't
-understand which targets in your scheme are test targets, which test
-suites or cases you might have disabled in your scheme, or how to run
-simulator-based, application tests.
-
-  If you use [application
-tests](http://developer.apple.com/library/mac/#documentation/developertools/Conceptual/UnitTesting/08-Glossary/glossary.html#//apple_ref/doc/uid/TP40002143-CH8-SW1),
-you've probably seen xcodebuild skipping them with this message:
-	
-	```
-	Skipping tests; the iPhoneSimulator platform does not currently support
-	application-hosted tests (TEST_HOST set).
-	```
-
-  *xctool* fixes this - it looks at your Xcode scheme and is able to
-reproduce the same test run you would get with Xcode.app via _Cmd-U_ or 
-_Product &rarr; Test_, including running application tests that require
-the iOS simulator.
-
 * **Structured output of build and test results.**
 
   _xctool_ captures all build events and test results as structured JSON
@@ -68,10 +46,25 @@ and 3x speed ups by parallelizing our runs.
   Use the `-parallelize` option with _run-tests_ or _test_ to enable.
 See [Parallelizing Test Runs](#parallelizing-test-runs) for more info.
 
+* **Written in Objective-C.**
+
+  _xctool_ is written in Objective-C. Mac OS X and iOS developers can easily submit new
+features and fix any bugs they may encounter without learning a new language. We very much welcome pull requests!
+
 ## Requirements
 
-You'll need Xcode's Command Line Tools installed.  From Xcode, install
+* Xcode 6 or higher
+* You'll need Xcode's Command Line Tools installed.  From Xcode, install
 via _Xcode &rarr; Preferences &rarr; Downloads_.
+
+## Installation
+
+xctool can be installed from homebrew via 
+```bash
+brew install xctool
+```
+
+or can be downloaded and run via the xctool.sh command. 
 
 ## Usage
 
@@ -81,7 +74,7 @@ run as expected but with more attractive output.
 
 You can always get help and a full list of options with:
 
-```
+```bash
 path/to/xctool.sh -help
 ```
 
@@ -92,7 +85,7 @@ _xcodebuild_.
 
 If you use workspaces and schemes:
 
-```
+```bash
 path/to/xctool.sh \
   -workspace YourWorkspace.xcworkspace \
   -scheme YourScheme \
@@ -101,7 +94,7 @@ path/to/xctool.sh \
 
 If you use projects and schemes:
 
-```
+```bash
 path/to/xctool.sh \
   -project YourProject.xcodeproj \
   -scheme YourScheme \
@@ -122,7 +115,7 @@ or change the SDK they're run against.
 
 To build and run all tests in your scheme, you would use:
 
-```
+```bash
 path/to/xctool.sh \
   -workspace YourWorkspace.xcworkspace \
   -scheme YourScheme \
@@ -131,7 +124,7 @@ path/to/xctool.sh \
 
 To build and run just the tests in a specific target, use the `-only` option:
 
-```
+```bash
 path/to/xctool.sh \
   -workspace YourWorkspace.xcworkspace \
   -scheme YourScheme \
@@ -140,7 +133,7 @@ path/to/xctool.sh \
 
 You can go further and just run a specific test class:
 
-```
+```bash
 path/to/xctool.sh \
   -workspace YourWorkspace.xcworkspace \
   -scheme YourScheme \
@@ -149,16 +142,25 @@ path/to/xctool.sh \
 
 Or, even further and run just a single test method:
 
-```
+```bash
 path/to/xctool.sh \
   -workspace YourWorkspace.xcworkspace \
   -scheme YourScheme \
   test -only SomeTestTarget:SomeTestClass/testSomeMethod
 ```
 
+You can also specify prefix matching for classes or test methods:
+
+```bash
+path/to/xctool.sh \
+  -workspace YourWorkspace.xcworkspace \
+  -scheme YourScheme \
+  test -only SomeTestTarget:SomeTestClassPrefix*,SomeTestClass/testSomeMethodPrefix*
+```
+
 You can also run tests against a different SDK:
 
-```
+```bash
 path/to/xctool.sh \
   -workspace YourWorkspace.xcworkspace \
   -scheme YourScheme \
@@ -172,7 +174,7 @@ build them without running them.  For that, use __build-tests__.
 
 For example:
 
-```
+```bash
 path/to/xctool.sh \
   -workspace YourWorkspace.xcworkspace \
   -scheme YourScheme \
@@ -181,7 +183,7 @@ path/to/xctool.sh \
 
 You can optionally just build a single test target with the `-only` option:
 
-```
+```bash
 path/to/xctool.sh \
   -workspace YourWorkspace.xcworkspace \
   -scheme YourScheme \
@@ -196,7 +198,7 @@ once but run them against multiple SDKs.
 
 To run all tests, you would use:
 
-```
+```bash
 path/to/xctool.sh \
   -workspace YourWorkspace.xcworkspace \
   -scheme YourScheme \
@@ -207,6 +209,11 @@ Just as with the __test__ action, you can limit which tests are run with
 the `-only`.  And, you can change which SDK they're run against
 with the `-test-sdk`.
 
+Optionally you can specify `-testTimeout` when running tests. When an individual test hits this timeout, it is considered a failure rather than waiting indefinitely. This can prevent your test run from deadlocking forever due to misbehaving tests.
+
+By default application tests will wait at most 30 seconds for the simulator
+to launch. If you need to change this timeout, use the `-launch-timeout` option.
+
 #### Parallelizing Test Runs
 
 _xctool_ can optionally run unit tests in parallel, making better use of
@@ -216,7 +223,7 @@ parallelizing our test runs.
 To allow test bundles to run concurrently, use the `-parallelize`
 option:
 
-```
+```bash
 path/to/xctool.sh \
   -workspace YourWorkspace.xcworkspace \
   -scheme YourScheme \
@@ -231,7 +238,7 @@ tests, then the above parallelism won't help much.
 You can get further gains by breaking your test execution into buckets
 using the `-logicTestBucketSize` option:
 
-```
+```bash
 path/to/xctool.sh \
   -workspace YourWorkspace.xcworkspace \
   -scheme YourScheme \
@@ -256,7 +263,7 @@ you must create **Shared Schemes** for your application target and ensure that a
 configured as explicit dependencies. To do so:
     1. Highlight your application target and hit the **Edit...** button to open the Scheme editing sheet.
     1. Click the **Build** tab in the left-hand panel of the Scheme editor.
-    1. Click the **+** button and add each dependency to the project. CocoaPods will appears as static library named **Pods**.
+    1. Click the **+** button and add each dependency to the project. CocoaPods will appear as a static library named **Pods**.
     1. Drag the dependency above your application target so that it is built first.
 
 You will now have a new file in the **xcshareddata/xcschemes** directory underneath your Xcode project. This is the
@@ -274,7 +281,7 @@ shared Scheme for use with xctool, you will need to configure a
 
 If you're using workspaces, your `.travis.yml` might be:
 
-```
+```yaml
 language: objective-c
 xcode_workspace: path/to/YourApp.xcworkspace
 xcode_scheme: YourApp
@@ -282,7 +289,7 @@ xcode_scheme: YourApp
 
 If you're using projects, your `.travis.yml` might be:
 
-```
+```yaml
 language: objective-c
 xcode_project: path/to/YourApp.xcodeproj
 xcode_scheme: YourApp
@@ -291,7 +298,7 @@ xcode_scheme: YourApp
 For more flexibility, you can also control how Travis installs and
 invokes xctool:
 
-```
+```yaml
 language: objective-c
 before_install:
     - brew update
@@ -309,11 +316,17 @@ Started](http://about.travis-ci.org/docs/user/getting-started/) page.
 ## Reporters
 
 xctool has reporters that output build and test results in different
-formats.  By default, _xctool_ always uses the `pretty` reporter.
+formats.  If you do not specify any reporters yourself, xctool uses
+the `pretty` and `user-notifications` reporters by default.
+Overwrite is disabled on the `pretty` reporter when xctool does not
+detect a TTY. This can be overridden by setting `XCTOOL_FORCE_TTY` in
+the environment. The `user-notifications` reporter will not be used
+if xctool detects that the build is being run by Travis CI,
+i.e. `TRAVIS=true` in the environment.
 
-You can change or add reporters with the `-reporter` option:
+You can choose your own reporters with the `-reporter` option:
 
-```
+```bash
 path/to/xctool.sh \
   -workspace YourWorkspace.xcworkspace \
   -scheme YourScheme \
@@ -324,7 +337,7 @@ path/to/xctool.sh \
 By default, reporters output to standard out, but you can also direct
 the output to a file by adding `:OUTPUT_PATH` after the reporter name:
 
-```
+```bash
 path/to/xctool.sh \
   -workspace YourWorkspace.xcworkspace \
   -scheme YourScheme \
@@ -332,11 +345,14 @@ path/to/xctool.sh \
   build
 ```
 
+You can use as many reporters as you like; just use the `-reporter`
+option multiple times.
+
 ### Included Reporters
 
 * __pretty__: a text-based reporter that uses ANSI colors and unicode
 symbols for pretty output (the default).
-* __plain__: like _pretty_, but with with no colors or unicode.
+* __plain__: like _pretty_, but with no colors or unicode.
 * __phabricator__: outputs a JSON array of build/test results which can
 be fed into the [Phabricator](http://phabricator.org/) code-review tool.
 * __junit__: produces a JUnit/xUnit compatible XML file with test
@@ -345,6 +361,8 @@ results.
 one per line [(example
 output)](https://gist.github.com/fpotter/82ffcc3d9a49d10ee41b).
 * __json-compilation-database__: outputs a [JSON Compilation Database](http://clang.llvm.org/docs/JSONCompilationDatabase.html) of build events which can be used by [Clang Tooling](http://clang.llvm.org/docs/LibTooling.html) based tools, e.g. [OCLint](http://oclint.org).
+* __user-notifications__: sends notification to Notification Center when action is completed [(example notifications)](https://cloud.githubusercontent.com/assets/1044236/2771974/a2715306-ca74-11e3-9889-fa50607cc412.png).
+* __teamcity__: sends service messages to [TeamCity](http://www.jetbrains.com/teamcity/) Continuous Integration Server
 
 ### Implementing Your Own Reporters
 
@@ -355,7 +373,7 @@ objects from STDIN and write formatted results to STDOUT.
 You can invoke reporters by passing their full path via the `-reporter`
 option:
 
-```
+```bash
 path/to/xctool.sh \
   -workspace YourWorkspace.xcworkspace \
   -scheme YourScheme \
@@ -366,7 +384,7 @@ path/to/xctool.sh \
 For example, here's a simple reporter in Python that outputs a _period_
 for every passing test and an _exclamation mark_ for every failing test:
 
-```
+```python
 #!/usr/bin/python
 
 import fileinput
@@ -386,7 +404,7 @@ sys.stdout.write('\n')
 ```
 
 If you're writing a reporter in Objective-C, you'll find the
-`Reporter` class helpful - see [Reporter.h](https://github.com/facebook/xctool/blob/master/reporters/reporters/Reporter.h).
+`Reporter` class helpful - see [Reporter.h](https://github.com/facebook/xctool/blob/master/Common/Reporter.h).
 
 
 ## Configuration (.xctool-args)
@@ -398,7 +416,7 @@ will automatically pre-populate its arguments from there.
 
 The format is just a JSON array of arguments:
 
-```
+```json
 [
   "-workspace", "YourWorkspace.xcworkspace",
   "-scheme", "YourScheme",
@@ -408,13 +426,13 @@ The format is just a JSON array of arguments:
 ]
 ```
 
-Any extra arguments you pass on the command-line will take precendence
+Any extra arguments you pass on the command-line will take precedence 
 over those in the _.xctool-args_ file.
 
 ## Contributing
 
 Bug fixes, improvements, and especially new
-[Reporter](https://github.com/facebook/xctool/blob/master/xctool/xctool/Reporter.h)
+[Reporter](#reporters)
 implementations are welcome.  Before submitting a [pull
 request](https://help.github.com/articles/using-pull-requests), please
 be sure to sign the [Facebook
@@ -426,8 +444,7 @@ accept pull requests unless it's been signed.
 
 1. Fork.
 2. Make a feature branch: __git checkout -b my-feature__
-3. Make your feature.  Keep things tidy so you have one commit per self
-   contained change (squashing can help).
+3. Make your feature.  Keep things tidy so you have one commit per self-contained change (squashing can help).
 3. Push your branch to your fork: __git push -u origin my-feature__
 4. Open GitHub, under "Your recently pushed branches", click __Pull
    Request__ for _my-feature_.
@@ -462,10 +479,32 @@ It's a nice way to keep things together.
   same information, and are building in the same way.
   
   ![example](https://fpotter_public.s3.amazonaws.com/xctool-shared-schemes.png)
+  
+* __Make sure simulators run in a GUI context__.
+
+  If you are running `xctool` in continuous integration, the user account
+  calling `xctool` **must** have an active GUI context.
+  If not, the simulator will fail to start with cryptic warnings like:
+  
+  ```
+  Tried to install the test host app 'com.myapp.test' but failed.
+  Preparing test environment failed.
+  -[TEST_BUNDLE FAILED_TO_START] 
+  There was a problem starting the test bundle: Simulator 'iPhone 6' was not prepared: Failed for unknown reason.
+  Test did not run: Simulator 'iPhone 6' was not prepared: Failed for unknown reason.
+  2015-01-21 12:02:19.296 xcodebuild[35135:875297]  iPhoneSimulator: Timed out waiting 120 seconds for simulator to boot, current state is 1.
+  Testing failed:
+  Test target MyProjectTests encountered an error (Timed out waiting 120 seconds for simulator to boot, current state is 1.  
+  ```
+  
+  Note that the
+  same holds true with `xcodebuild`...this is not `xctool` specific.
+  
+  For more information, see [this post by Jason Jarrett](http://staxmanade.com/2015/01/setting-jenkins-up-to-run-xctool-and-xcode-simulator-tests/).
 
 ## License
 
-Copyright 2013 Facebook
+Copyright 2014-present Facebook
 
 Licensed under the Apache License, Version 2.0 (the "License"); you may
 not use this work except in compliance with the License. You may obtain

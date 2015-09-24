@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,29 +15,10 @@
 //
 
 #import "SenTestClassEnumeratorFix.h"
-
-#import "dyld-interposing.h"
 #import "Swizzle.h"
+#import "dyld-interposing.h"
 
-/**
- A struct with the same layout as SenTestCase.
- 
- We use this instead of copying the class-dump of SenTestCase into
- this file.  If we did that, the linker would need to link directly into
- SenTestingKit, which we specifically do not want to do (because the initializer
- in SenTestingKit will immediately start running tests, prematurely for what
- we're doing).
- */
-struct XTSenTestCase
-{
-  Class isa;
-
-  NSInvocation *invocation;
-  id *run;
-  SEL failureAction;
-};
-
-@interface XTSenTestCase
+@interface XTSenTestCase : NSObject
 - (NSUInteger)numberOfTestIterationsForTestWithSelector:(SEL)arg1;
 - (void)afterTestIteration:(unsigned long long)arg1 selector:(SEL)arg2;
 - (void)beforeTestIteration:(unsigned long long)arg1 selector:(SEL)arg2;
@@ -49,8 +30,7 @@ struct XTSenTestCase
 
 static void SenTestCase_invokeTest(XTSenTestCase *self, SEL cmd)
 {
-  struct XTSenTestCase *testCaseStruct = (struct XTSenTestCase *)self;
-  NSInvocation *invocation = testCaseStruct->invocation;
+  NSInvocation *invocation = [self valueForKey:@"invocation"];
 
   SEL selector = [invocation selector];
 
@@ -58,18 +38,31 @@ static void SenTestCase_invokeTest(XTSenTestCase *self, SEL cmd)
   // This is the whole reason we re-implement this method.
   NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
 
-  [self setUpTestWithSelector:selector];
+  // the SenTestKit framework on iOS 5.0 does not implement most methods used here (see https://github.com/facebook/xctool/issues/334)
+  // so check for that and skip the non-implemented methods if necessary
+
+  if ([self respondsToSelector:@selector(setUpTestWithSelector:)]) {
+    [self setUpTestWithSelector:selector];
+  }
   [self setUp];
 
-  NSUInteger numberOfIterations = [self numberOfTestIterationsForTestWithSelector:selector];
-  for (NSUInteger i = 0; i < numberOfIterations; i++) {
-    [self beforeTestIteration:i selector:selector];
+  BOOL supportsTestIterations = [self respondsToSelector:@selector(numberOfTestIterationsForTestWithSelector:)];
+
+  if (supportsTestIterations) {
+    NSUInteger numberOfIterations = [self numberOfTestIterationsForTestWithSelector:selector];
+    for (NSUInteger i = 0; i < numberOfIterations; i++) {
+      [self beforeTestIteration:i selector:selector];
+      [invocation invoke];
+      [self afterTestIteration:i selector:selector];
+    }
+  } else {
     [invocation invoke];
-    [self afterTestIteration:i selector:selector];
   }
 
   [self tearDown];
-  [self tearDownTestWithSelector:selector];
+  if ([self respondsToSelector:@selector(tearDownTestWithSelector:)]) {
+    [self tearDownTestWithSelector:selector];
+  }
 
   [pool drain];
 }

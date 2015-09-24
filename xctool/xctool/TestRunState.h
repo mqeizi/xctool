@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,22 +16,21 @@
 
 #import <Foundation/Foundation.h>
 
-#import "Reporter.h"
-#import "OCTestSuiteEventState.h"
 #import "OCTestEventState.h"
+#import "OCTestSuiteEventState.h"
+#import "Reporter.h"
 
-@interface TestRunState : Reporter {
-  OCTestSuiteEventState *_testSuiteState;
-  OCTestEventState *_previousTestState;
-  NSSet *_crashReportsAtStart;
-  NSMutableString *_outputBeforeTestsStart;
-}
+@interface TestRunState : Reporter
+
+@property (nonatomic, strong, readonly) OCTestSuiteEventState *testSuiteState;
 
 - (instancetype)initWithTests:(NSArray *)testList
                     reporters:(NSArray *)reporters;
 
+- (instancetype)initWithTestSuiteEventState:(OCTestSuiteEventState *)suiteState;
+
 - (BOOL)allTestsPassed;
 - (void)prepareToRun;
-- (void)didFinishRunWithStartupError:(NSString *)startupError;
+- (void)didFinishRunWithStartupError:(NSString *)startupError otherErrors:(NSString *)otherErrors;
 
 @end

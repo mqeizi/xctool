@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,42 +20,26 @@
 #import "OCUnitIOSLogicTestQueryRunner.h"
 #import "OCUnitOSXAppTestQueryRunner.h"
 #import "OCUnitOSXLogicTestQueryRunner.h"
+#import "SimulatorInfo.h"
 #import "TaskUtil.h"
+#import "XCToolUtil.h"
 #import "XcodeBuildSettings.h"
 #import "XcodeSubjectInfo.h"
-#import "XCToolUtil.h"
 
 @implementation TestableExecutionInfo
 
 + (instancetype)infoForTestable:(Testable *)testable
-               xcodeSubjectInfo:(XcodeSubjectInfo *)xcodeSubjectInfo
-            xcodebuildArguments:(NSArray *)xcodebuildArguments
-                        testSDK:(NSString *)testSDK
-                        cpuType:(cpu_type_t)cpuType
+                  buildSettings:(NSDictionary *)buildSettings
+                  simulatorInfo:(SimulatorInfo *)simulatorInfo
 {
-  TestableExecutionInfo *info = [[[TestableExecutionInfo alloc] init] autorelease];
+  TestableExecutionInfo *info = [[TestableExecutionInfo alloc] init];
   info.testable = testable;
-
-  NSString *buildSettingsError = nil;
-  NSDictionary *buildSettings = [[self class] testableBuildSettingsForProject:testable.projectPath
-                                                                       target:testable.target
-                                                                      objRoot:xcodeSubjectInfo.objRoot
-                                                                      symRoot:xcodeSubjectInfo.symRoot
-                                                            sharedPrecompsDir:xcodeSubjectInfo.sharedPrecompsDir
-                                                               xcodeArguments:xcodebuildArguments
-                                                                      testSDK:testSDK
-                                                                        error:&buildSettingsError];
-  
-  if (buildSettings) {
-    info.buildSettings = buildSettings;
-  } else {
-    info.buildSettingsError = buildSettingsError;
-    return info;
-  }
+  info.buildSettings = buildSettings;
+  info.simulatorInfo = simulatorInfo;
+  info.simulatorInfo.buildSettings = buildSettings;
 
   NSString *otestQueryError = nil;
-  NSArray *testCases = [[self class] queryTestCasesWithBuildSettings:info.buildSettings
-                                                             cpuType:cpuType
+  NSArray *testCases = [[self class] queryTestCasesWithSimulatorInfo:info.simulatorInfo
                                                                error:&otestQueryError];
   if (testCases) {
     info.testCases = testCases;
@@ -66,10 +50,14 @@
   // In Xcode, you can optionally include variables in your args or environment
   // variables.  i.e. "$(ARCHS)" gets transformed into "armv7".
   if (testable.macroExpansionProjectPath != nil) {
+    // Override any settings that are defined in the environment
+    NSMutableDictionary *settingsAndProcessEnvironment = [info.buildSettings mutableCopy];
+    [settingsAndProcessEnvironment addEntriesFromDictionary:[[NSProcessInfo processInfo] environment]];
+
     info.expandedArguments = [self argumentsWithMacrosExpanded:testable.arguments
-                                             fromBuildSettings:info.buildSettings];
+                        fromBuildSettingsAndProcessEnvironment:settingsAndProcessEnvironment];
     info.expandedEnvironment = [self enviornmentWithMacrosExpanded:testable.environment
-                                    fromBuildSettings:info.buildSettings];
+                            fromBuildSettingsAndProcessEnvironment:settingsAndProcessEnvironment];
   } else {
     info.expandedArguments = testable.arguments;
     info.expandedEnvironment = testable.environment;
@@ -83,6 +71,7 @@
                                           objRoot:(NSString *)objRoot
                                           symRoot:(NSString *)symRoot
                                 sharedPrecompsDir:(NSString *)sharedPrecompsDir
+                             targetedDeviceFamily:(NSString *)targetedDeviceFamily
                                    xcodeArguments:(NSArray *)xcodeArguments
                                           testSDK:(NSString *)testSDK
                                             error:(NSString **)error
@@ -97,29 +86,31 @@
     xcodeArguments = ArgumentListByOverriding(xcodeArguments, @"-sdk", testSDK);
   }
 
-  // For Xcode 5, we can pass `test -showBuildSettings` to xcodebuild and get
-  // build settings that are specific to the `test` action.  In previous versions,
-  // there was only the `build` action.
-  NSString *action = ToolchainIsXcode5OrBetter() ? @"test" : @"build";
+  // For Xcode 6, we can pass `test -showBuildSettings` to xcodebuild and get
+  // build settings that are specific to the `test` action.  But in Xcode 7
+  // `-scheme` should be passed along with `test` action which isn't always
+  // defined. So we are using `build` action which doesn't require to specify
+  // scheme.
+  NSString *action = ToolchainIsXcode7OrBetter() ? @"build" : @"test";
 
   [settingsTask setArguments:[xcodeArguments arrayByAddingObjectsFromArray:@[
-                                                                             @"-project", projectPath,
-                                                                             @"-target", target,
-                                                                             [NSString stringWithFormat:@"%@=%@", Xcode_OBJROOT, objRoot],
-                                                                             [NSString stringWithFormat:@"%@=%@", Xcode_SYMROOT, symRoot],
-                                                                             [NSString stringWithFormat:@"%@=%@", Xcode_SHARED_PRECOMPS_DIR, sharedPrecompsDir],
-                                                                             action,
-                                                                             @"-showBuildSettings",
-                                                                             ]]];
+    @"-project", projectPath,
+    @"-target", target,
+    [NSString stringWithFormat:@"%@=%@", Xcode_OBJROOT, objRoot],
+    [NSString stringWithFormat:@"%@=%@", Xcode_SYMROOT, symRoot],
+    [NSString stringWithFormat:@"%@=%@", Xcode_SHARED_PRECOMPS_DIR, sharedPrecompsDir],
+    [NSString stringWithFormat:@"%@=%@", Xcode_TARGETED_DEVICE_FAMILY, targetedDeviceFamily],
+    action,
+    @"-showBuildSettings",
+   ]]];
 
   [settingsTask setEnvironment:@{
-                                 @"DYLD_INSERT_LIBRARIES" : [XCToolLibPath() stringByAppendingPathComponent:@"xcodebuild-fastsettings-shim.dylib"],
-                                 @"SHOW_ONLY_BUILD_SETTINGS_FOR_TARGET" : target,
-                                 }];
+    @"DYLD_INSERT_LIBRARIES" : [XCToolLibPath() stringByAppendingPathComponent:@"xcodebuild-fastsettings-shim.dylib"],
+    @"SHOW_ONLY_BUILD_SETTINGS_FOR_TARGET" : target,
+  }];
 
   NSDictionary *output = LaunchTaskAndCaptureOutput(settingsTask,
                                                     [NSString stringWithFormat:@"running xcodebuild -showBuildSettings for '%@' target", target]);
-  [settingsTask release];
   settingsTask = nil;
 
   NSDictionary *allSettings = BuildSettingsFromOutput(output[@"stdout"]);
@@ -149,7 +140,7 @@
     *error = [NSString stringWithFormat:@"Should have found build settings for target '%@'", target];
     return nil;
   }
-  
+
   return allSettings[target];
 }
 
@@ -157,21 +148,14 @@
  * Use otest-query-[ios|osx] to get a list of all SenTestCase classes in the
  * test bundle.
  */
-+ (NSArray *)queryTestCasesWithBuildSettings:(NSDictionary *)testableBuildSettings
-                                     cpuType:(cpu_type_t)cpuType
++ (NSArray *)queryTestCasesWithSimulatorInfo:(SimulatorInfo *)simulatorInfo
                                        error:(NSString **)error
 {
-  NSString *sdkName = testableBuildSettings[Xcode_SDK_NAME];
-  BOOL isApplicationTest = TestableSettingsIndicatesApplicationTest(testableBuildSettings);
+  NSString *sdkName = simulatorInfo.buildSettings[Xcode_SDK_NAME];
+  BOOL isApplicationTest = TestableSettingsIndicatesApplicationTest(simulatorInfo.buildSettings);
 
   Class runnerClass = {0};
-  if ([sdkName hasPrefix:@"iphonesimulator"]) {
-    if (isApplicationTest) {
-      runnerClass = [OCUnitIOSAppTestQueryRunner class];
-    } else {
-      runnerClass = [OCUnitIOSLogicTestQueryRunner class];
-    }
-  } else if ([sdkName hasPrefix:@"macosx"]) {
+  if ([sdkName hasPrefix:@"macosx"]) {
     if (isApplicationTest) {
       runnerClass = [OCUnitOSXAppTestQueryRunner class];
     } else {
@@ -182,58 +166,81 @@
     // we'll never get far enough to run OCUnitIOSDeviceTestRunner.
     return @[@"Placeholder/ForDeviceTests"];
   } else {
-    NSAssert(NO, @"Unexpected SDK: %@", sdkName);
-    abort();
+    if (isApplicationTest) {
+      runnerClass = [OCUnitIOSAppTestQueryRunner class];
+    } else {
+      runnerClass = [OCUnitIOSLogicTestQueryRunner class];
+    }
   }
-  OCUnitTestQueryRunner *runner = [[[runnerClass alloc] initWithBuildSettings:testableBuildSettings
-                                                                  withCpuType:cpuType] autorelease];
+  OCUnitTestQueryRunner *runner = [[runnerClass alloc] initWithSimulatorInfo:simulatorInfo];
   return [runner runQueryWithError:error];
 }
 
+/**
+ * Xcode 6.4 behavior:
+ * $(KNOWN_MACRO) -> "MACRO_REPLACEMENT"
+ * $KNOWN_MACRO -> "MACRO_REPLACEMENT"
+ * $(UNKNOWN_MACRO) -> ""
+ * $UNKNOWN_MACRO -> "$UNKNOWN_MACRO"
+ */
 + (NSString *)stringWithMacrosExpanded:(NSString *)str
-                     fromBuildSettings:(NSDictionary *)settings
+fromBuildSettingsAndProcessEnvironment:(NSDictionary *)settings
 {
   NSMutableString *result = [NSMutableString stringWithString:str];
-
-  [settings enumerateKeysAndObjectsUsingBlock:^(NSString *key, NSString *val, BOOL *stop){
-    NSString *macroStr = [[NSString alloc] initWithFormat:@"$(%@)", key];
-    [result replaceOccurrencesOfString:macroStr
-                            withString:val
-                               options:0
-                                 range:NSMakeRange(0, [result length])];
-    [macroStr release];
-  }];
-
+  NSRegularExpression *regex = [[NSRegularExpression alloc] initWithPattern:@"\\$\\(?(\\w+)\\)?"
+                                                                    options:NSRegularExpressionCaseInsensitive
+                                                                      error:nil];
+  BOOL replaced = YES;
+  while (replaced) {
+    replaced = NO;
+    NSArray *matches = [regex matchesInString:result options:0 range:NSMakeRange(0, result.length)];
+    for (NSTextCheckingResult *match in matches) {
+      NSRange macroRange = [match rangeAtIndex:1];
+      if (macroRange.location == NSNotFound) {
+        continue;
+      }
+      NSString *matchedKeyword = [result substringWithRange:macroRange];
+      if (settings[matchedKeyword]) {
+        [result replaceCharactersInRange:match.range withString:settings[matchedKeyword]];
+        replaced = YES;
+      } else if (match.range.length == macroRange.length + 3) {
+        [result replaceCharactersInRange:match.range withString:@""];
+        replaced = YES;
+      }
+      break;
+    }
+  }
   return result;
 }
 
 + (NSArray *)argumentsWithMacrosExpanded:(NSArray *)arr
-                       fromBuildSettings:(NSDictionary *)settings
+  fromBuildSettingsAndProcessEnvironment:(NSDictionary *)settings
 {
   NSMutableArray *result = [NSMutableArray arrayWithCapacity:[arr count]];
 
   for (NSString *str in arr) {
     [result addObject:[[self class] stringWithMacrosExpanded:str
-                                           fromBuildSettings:settings]];
+                      fromBuildSettingsAndProcessEnvironment:settings]];
   }
 
   return result;
 }
 
 + (NSDictionary *)enviornmentWithMacrosExpanded:(NSDictionary *)dict
-                              fromBuildSettings:(NSDictionary *)settings
+         fromBuildSettingsAndProcessEnvironment:(NSDictionary *)settings
 {
   NSMutableDictionary *result = [NSMutableDictionary dictionaryWithCapacity:[dict count]];
 
   for (NSString *key in [dict allKeys]) {
     NSString *keyExpanded = [[self class] stringWithMacrosExpanded:key
-                                                 fromBuildSettings:settings];
+                            fromBuildSettingsAndProcessEnvironment:settings];
     NSString *valExpanded = [[self class] stringWithMacrosExpanded:dict[key]
-                                                 fromBuildSettings:settings];
+                            fromBuildSettingsAndProcessEnvironment:settings];
     result[keyExpanded] = valExpanded;
   }
 
   return result;
 }
+
 
 @end

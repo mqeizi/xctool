@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,37 +24,42 @@
  * params it accepts are all the common params that xcodebuild would accept.
  */
 @interface Options : Action
-{
-  NSMutableArray *_reporterOptions;
-}
 
 + (NSArray *)actionClasses;
 
-@property (nonatomic, retain) NSString *workspace;
-@property (nonatomic, retain) NSString *project;
-@property (nonatomic, retain) NSString *scheme;
-@property (nonatomic, retain) NSString *configuration;
-@property (nonatomic, retain) NSString *sdk;
-@property (nonatomic, retain) NSString *arch;
-@property (nonatomic, retain) NSString *destination;
-@property (nonatomic, retain) NSString *toolchain;
-@property (nonatomic, retain) NSString *xcconfig;
-@property (nonatomic, retain) NSString *jobs;
-@property (nonatomic, retain) NSString *findTarget;
-@property (nonatomic, retain) NSString *findTargetPath;
-@property (nonatomic, retain) NSArray *findTargetExcludePaths;
+@property (nonatomic, copy) NSString *workspace;
+@property (nonatomic, copy) NSString *project;
+@property (nonatomic, copy) NSString *scheme;
+@property (nonatomic, copy) NSString *configuration;
+@property (nonatomic, copy) NSString *sdk;
+@property (nonatomic, copy) NSString *sdkPath;
+@property (nonatomic, copy) NSString *platformPath;
+@property (nonatomic, copy) NSString *arch;
+@property (nonatomic, copy) NSString *destination;
+@property (nonatomic, copy) NSString *destinationTimeout;
+@property (nonatomic, copy) NSString *toolchain;
+@property (nonatomic, copy) NSString *xcconfig;
+@property (nonatomic, copy) NSString *jobs;
+@property (nonatomic, copy) NSString *findTarget;
+@property (nonatomic, copy) NSString *findTargetPath;
+@property (nonatomic, copy) NSString *findProjectPath;
+@property (nonatomic, copy) NSString *resultBundlePath;
+@property (nonatomic, copy) NSString *derivedDataPath;
+@property (nonatomic, copy) NSArray *findTargetExcludePaths;
+@property (nonatomic, copy) NSString *launchTimeout;
 
 @property (nonatomic, assign) BOOL showBuildSettings;
 @property (nonatomic, assign) BOOL showTasks;
+@property (nonatomic, assign) BOOL actionScripts;
 
-@property (nonatomic, retain) NSMutableDictionary *buildSettings;
-@property (nonatomic, retain) NSMutableDictionary *userDefaults;
-@property (nonatomic, retain) NSMutableArray *reporters;
+@property (nonatomic, strong) NSMutableDictionary *buildSettings;
+@property (nonatomic, strong) NSMutableDictionary *userDefaults;
+@property (nonatomic, strong) NSMutableArray *reporters;
 
 @property (nonatomic, assign) BOOL showHelp;
 @property (nonatomic, assign) BOOL showVersion;
 
-@property (nonatomic, retain) NSMutableArray *actions;
+@property (nonatomic, strong) NSMutableArray *actions;
 
 /**
  Returns the command-line arguments that were passed to xctool, and which should

@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@
 
 #import "AnalyzeAction.h"
 
-#import "Buildable.h"
 #import "BuildStateParser.h"
+#import "Buildable.h"
 #import "EventGenerator.h"
 #import "EventSink.h"
 #import "Options.h"
@@ -27,7 +27,7 @@
 
 @interface BuildTargetsCollector : NSObject <EventSink>
 /// Array of @{@"projectName": projectName, @"targetName": targetName}
-@property (nonatomic, retain) NSMutableSet *seenTargets;
+@property (nonatomic, strong) NSMutableSet *seenTargets;
 @end
 
 @implementation BuildTargetsCollector
@@ -35,10 +35,11 @@
 - (instancetype)init
 {
   if (self = [super init]) {
-    self.seenTargets = [NSMutableSet set];
+    _seenTargets = [[NSMutableSet alloc] init];
   }
   return self;
 }
+
 
 - (void)publishDataForEvent:(NSData *)data
 {
@@ -49,7 +50,7 @@
   NSAssert(event != nil, @"Error decoding JSON: %@", [error localizedFailureReason]);
 
   if ([event[@"event"] isEqualTo:kReporter_Events_BeginBuildTarget]) {
-    [self.seenTargets addObject:@{
+    [_seenTargets addObject:@{
      @"projectName": event[kReporter_BeginBuildTarget_ProjectKey],
      @"targetName": event[kReporter_BeginBuildTarget_TargetKey],
      }];
@@ -59,7 +60,7 @@
 @end
 
 @interface AnalyzeAction ()
-@property (nonatomic, retain) NSMutableSet *onlySet;
+@property (nonatomic, strong) NSMutableSet *onlySet;
 @property (nonatomic, assign) BOOL skipDependencies;
 @property (nonatomic, assign) BOOL failOnWarnings;
 @end
@@ -147,16 +148,49 @@
                                                 error:0];
   }
 
-  NSString *path = [[self class]
-                    intermediatesDirForProject:projectName
-                    target:targetName
-                    configuration:[options effectiveConfigurationForSchemeAction:@"AnalyzeAction"
-                                                                xcodeSubjectInfo:xcodeSubjectInfo]
-                    platform:xcodeSubjectInfo.effectivePlatformName
-                    objroot:xcodeSubjectInfo.objRoot];
+  NSString *path = [[self class] intermediatesDirForProject:projectName
+                                                     target:targetName
+                                              configuration:[options effectiveConfigurationForSchemeAction:@"AnalyzeAction"
+                                                                                          xcodeSubjectInfo:xcodeSubjectInfo]
+                                                   platform:xcodeSubjectInfo.effectivePlatformName
+                                                    objroot:xcodeSubjectInfo.objRoot];
   NSString *buildStatePath = [path stringByAppendingPathComponent:@"build-state.dat"];
+  NSMutableArray *plistPaths = [NSMutableArray array];
+  BOOL buildPathExists = [[NSFileManager defaultManager] fileExistsAtPath:buildStatePath];
 
-  if (![[NSFileManager defaultManager] fileExistsAtPath:buildStatePath]) {
+  if (buildPathExists) {
+    BuildStateParser *buildState = [[BuildStateParser alloc] initWithPath:buildStatePath];
+    for (NSString *path in buildState.nodes) {
+      NSTextCheckingResult *result = [analyzerPlistPathRegex
+                                      firstMatchInString:path
+                                      options:0
+                                      range:NSMakeRange(0, path.length)];
+
+      if (result == nil || result.range.location == NSNotFound) {
+        continue;
+      }
+
+      [plistPaths addObject:path];
+    }
+  } else if(path && projectName && targetName) {
+    NSString *analyzerFilesPath = [NSString pathWithComponents:@[
+                                                                 path,
+                                                                 @"StaticAnalyzer",
+                                                                 projectName,
+                                                                 targetName,
+                                                                 @"normal",
+                                                                 options.arch ? options.arch : @"armv7",
+                                                                 ]];
+
+    NSArray *pathContents = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:analyzerFilesPath error:nil];
+
+    for (NSString *path in pathContents) {
+      if([[path pathExtension] isEqualToString:@"plist"]) {
+        NSString *plistPath = [NSString pathWithComponents:@[analyzerFilesPath, path]];
+        [plistPaths addObject:plistPath];
+      }
+    }
+  } else {
     NSLog(@"No build-state.dat for project/target: %@/%@, skipping...\n"
           "  it may be overriding CONFIGURATION_TEMP_DIR and emitting intermediate \n"
           "  files in a non-standard location", projectName, targetName);
@@ -165,16 +199,7 @@
 
   BOOL haveFoundWarnings = NO;
 
-  BuildStateParser *buildState = [[[BuildStateParser alloc] initWithPath:buildStatePath] autorelease];
-  for (NSString *path in buildState.nodes) {
-    NSTextCheckingResult *result = [analyzerPlistPathRegex
-                                    firstMatchInString:path
-                                    options:0
-                                    range:NSMakeRange(0, path.length)];
-
-    if (result == nil || result.range.location == NSNotFound) {
-      continue;
-    }
+  for (NSString *path in plistPaths) {
 
     NSDictionary *diags = [NSDictionary dictionaryWithContentsOfFile:path];
     for (NSDictionary *diag in diags[@"diagnostics"]) {
@@ -184,6 +209,8 @@
       NSNumber *line = diag[@"location"][@"line"];
       NSNumber *col = diag[@"location"][@"col"];
       NSString *desc = diag[@"description"];
+      NSString *category = diag[@"category"];
+      NSString *type = diag[@"type"];
       NSArray *context = [self.class contextFromDiagPath:diag[@"path"]
                                                  fileMap:diags[@"files"]];
 
@@ -196,6 +223,8 @@
           kReporter_AnalyzerResult_ColumnKey: col,
           kReporter_AnalyzerResult_DescriptionKey: desc,
           kReporter_AnalyzerResult_ContextKey: context,
+          kReporter_AnalyzerResult_CategoryKey: category,
+          kReporter_AnalyzerResult_TypeKey: type,
           }));
     }
   }
@@ -205,13 +234,14 @@
   }
 }
 
-- (id)init
+- (instancetype)init
 {
   if (self = [super init]) {
-    self.onlySet = [NSMutableSet set];
+    _onlySet = [[NSMutableSet alloc] init];
   }
   return self;
 }
+
 
 - (void)addOnlyOption:(NSString *)targetName
 {
@@ -222,7 +252,9 @@
                 xcodeSubjectInfo:(XcodeSubjectInfo *)xcodeSubjectInfo
 {
 
-  BuildTargetsCollector *buildTargetsCollector = [[[BuildTargetsCollector alloc] init] autorelease];
+  [xcodeSubjectInfo.actionScripts preAnalyzeWithOptions:options];
+
+  BuildTargetsCollector *buildTargetsCollector = [[BuildTargetsCollector alloc] init];
   NSArray *reporters = [options.reporters arrayByAddingObject:buildTargetsCollector];
 
   NSArray *buildArgs = [[options xcodeBuildArgumentsForSubject]
@@ -232,7 +264,7 @@
 
   BOOL success = YES;
   if (_onlySet.count) {
-    if (!self.skipDependencies) {
+    if (!_skipDependencies) {
       // build everything, and then build with analyze only the specified buildables
       NSArray *args = [buildArgs arrayByAddingObject:@"build"];
       success = RunXcodebuildAndFeedEventsToReporters(args, @"build", [options scheme], reporters);
@@ -264,6 +296,8 @@
     success = RunXcodebuildAndFeedEventsToReporters(args, @"analyze", [options scheme], reporters);
   }
 
+  [xcodeSubjectInfo.actionScripts postAnalyzeWithOptions:options];
+
   if (!success) {
     return NO;
   }
@@ -285,7 +319,7 @@
     haveFoundWarnings |= foundWarningsInBuildable;
   }
 
-  if (self.failOnWarnings) {
+  if (_failOnWarnings) {
     return !haveFoundWarnings;
   } else {
     return YES;

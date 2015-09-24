@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,28 +16,28 @@
 
 #import "OCUnitOSXAppTestQueryRunner.h"
 
+#import "SimulatorInfo.h"
 #import "TaskUtil.h"
-#import "XcodeBuildSettings.h"
 #import "XCToolUtil.h"
+#import "XcodeBuildSettings.h"
 
 @implementation OCUnitOSXAppTestQueryRunner
 
 - (NSTask *)createTaskForQuery
 {
-  NSString *builtProductsDir = _buildSettings[Xcode_BUILT_PRODUCTS_DIR];
+  NSMutableDictionary *environment = OSXTestEnvironment(_simulatorInfo.buildSettings);
+  [environment addEntriesFromDictionary:@{
+    @"DYLD_INSERT_LIBRARIES" : [XCToolLibPath() stringByAppendingPathComponent:@"otest-query-lib-osx.dylib"],
+    // The test bundle that we want to query from, as loaded by otest-query-lib-osx.dylib.
+    @"OtestQueryBundlePath" : [_simulatorInfo productBundlePath],
+    @"OBJC_DISABLE_GC" : @"YES",
+    @"__CFPREFERENCES_AVOID_DAEMON" : @"YES",
+  }];
 
   NSTask *task = CreateTaskInSameProcessGroup();
-  [task setLaunchPath:[self testHostPath]];
+  [task setLaunchPath:[_simulatorInfo testHostPath]];
   [task setArguments:@[]];
-  [task setEnvironment:@{@"DYLD_INSERT_LIBRARIES" : [XCToolLibPath() stringByAppendingPathComponent:@"otest-query-lib-osx.dylib"],
-                         // The test bundle that we want to query from, as loaded by otest-query-lib-osx.dylib.
-                         @"OtestQueryBundlePath" : [self bundlePath],
-                         @"DYLD_FRAMEWORK_PATH" : builtProductsDir,
-                         @"DYLD_LIBRARY_PATH" : builtProductsDir,
-                         @"DYLD_FALLBACK_FRAMEWORK_PATH" : [XcodeDeveloperDirPath() stringByAppendingPathComponent:@"Library/Frameworks"],
-                         @"NSUnbufferedIO" : @"YES",
-                         @"OBJC_DISABLE_GC" : @"YES",
-                         }];
+  [task setEnvironment:environment];
 
   return task;
 }

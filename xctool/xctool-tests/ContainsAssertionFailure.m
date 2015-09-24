@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,22 +20,17 @@
 
 + (instancetype)containsAssertionFailureFromMethod:(NSString *)method
 {
-  return [[[self alloc] initWithMethod:method] autorelease];
+  return [[self alloc] initWithMethod:method];
 }
 
 - (instancetype)initWithMethod:(NSString *)method
 {
   if (self = [super init]) {
-    _method = [method retain];
+    _method = method;
   }
   return self;
 }
 
-- (void)dealloc
-{
-  [super dealloc];
-  [_method release];
-}
 
 - (BOOL)matches:(id)item
 {

@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,14 +17,10 @@
 #import <Foundation/Foundation.h>
 
 @interface LineReader : NSObject
-{
-  NSFileHandle *_fileHandle;
-  NSMutableString *_buffer;
-}
 
 @property (nonatomic, copy) void (^didReadLineBlock)(NSString *);
 
-- (id)initWithFileHandle:(NSFileHandle *)fileHandle;
+- (instancetype)initWithFileHandle:(NSFileHandle *)fileHandle;
 
 - (void)startReading;
 - (void)stopReading;

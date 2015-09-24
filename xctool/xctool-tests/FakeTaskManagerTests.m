@@ -1,22 +1,37 @@
-
-#import <SenTestingKit/SenTestingKit.h>
+//
+// Copyright 2004-present Facebook. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 #import <objc/message.h>
 #import <objc/runtime.h>
+
+#import <XCTest/XCTest.h>
 
 #import "FakeTask.h"
 #import "FakeTaskManager.h"
 #import "TaskUtil.h"
 #import "XCToolUtil.h"
 
-@interface FakeTaskManagerTests : SenTestCase
+@interface FakeTaskManagerTests : XCTestCase
 @end
 
 @implementation FakeTaskManagerTests
 
 - (void)testCanRunRealTasks
 {
-  NSTask *task = [CreateTaskInSameProcessGroup() autorelease];
+  NSTask *task = CreateTaskInSameProcessGroup();
   [task setLaunchPath:@"/bin/echo"];
   [task setArguments:@[@"hello"]];
 
@@ -28,7 +43,7 @@
 - (void)testCanMakeAllTasksFake
 {
   [[FakeTaskManager sharedManager] enableFakeTasks];
-  NSTask *task = [CreateTaskInSameProcessGroup() autorelease];
+  NSTask *task = CreateTaskInSameProcessGroup();
   assertThat([[task class] description], equalTo(@"FakeTask"));
   [[FakeTaskManager sharedManager] disableFakeTasks];
 }
@@ -36,7 +51,7 @@
 - (void)testCanGetPretendStandardOutput
 {
   [[FakeTaskManager sharedManager] enableFakeTasks];
-  NSTask *task = [CreateTaskInSameProcessGroup() autorelease];
+  NSTask *task = CreateTaskInSameProcessGroup();
   [task setLaunchPath:@"/bin/something"];
   [(FakeTask *)task pretendTaskReturnsStandardOutput:@"some stdout string"];
   assertThat(LaunchTaskAndCaptureOutput(task, @"some description")[@"stdout"],
@@ -47,7 +62,7 @@
 - (void)testCanGetPretendStandardError
 {
   [[FakeTaskManager sharedManager] enableFakeTasks];
-  NSTask *task = [CreateTaskInSameProcessGroup() autorelease];
+  NSTask *task = CreateTaskInSameProcessGroup();
   [task setLaunchPath:@"/bin/something"];
   [(FakeTask *)task pretendTaskReturnsStandardError:@"some stderr string"];
   assertThat(LaunchTaskAndCaptureOutput(task, @"some description")[@"stderr"],
@@ -58,7 +73,7 @@
 - (void)testCanGetPretendExitStatus
 {
   [[FakeTaskManager sharedManager] enableFakeTasks];
-  NSTask *task = [CreateTaskInSameProcessGroup() autorelease];
+  NSTask *task = CreateTaskInSameProcessGroup();
   [task setLaunchPath:@"/bin/something"];
   [(FakeTask *)task pretendExitStatusOf:5];
   [task launch];
@@ -70,13 +85,13 @@
 - (void)testLaunchedTasksAreRecorded
 {
   [[FakeTaskManager sharedManager] enableFakeTasks];
-  NSTask *task1 = [CreateTaskInSameProcessGroup() autorelease];
+  NSTask *task1 = CreateTaskInSameProcessGroup();
   [task1 setLaunchPath:@"/bin/echo"];
   [task1 setArguments:@[@"task1"]];
   [task1 launch];
   [task1 waitUntilExit];
 
-  NSTask *task2 = [CreateTaskInSameProcessGroup() autorelease];
+  NSTask *task2 = CreateTaskInSameProcessGroup();
   [task2 setLaunchPath:@"/bin/echo"];
   [task2 setArguments:@[@"task2"]];
   [task2 launch];
@@ -93,7 +108,7 @@
 - (void)testRunBlockWithFakeTasksWorks
 {
   [[FakeTaskManager sharedManager] runBlockWithFakeTasks:^{
-    NSTask *task1 = [CreateTaskInSameProcessGroup() autorelease];
+    NSTask *task1 = CreateTaskInSameProcessGroup();
     [task1 setLaunchPath:@"/bin/echo"];
     [task1 setArguments:@[@"task1"]];
     [task1 launch];
@@ -104,12 +119,12 @@
   }];
 }
 
-- (void)testRunBlockWithFakeTasksPropogatesExceptionsAndDisablesFakeTasks
+- (void)testRunBlockWithFakeTasksPropagatesExceptionsAndDisablesFakeTasks
 {
   @try {
     [[FakeTaskManager sharedManager] runBlockWithFakeTasks:^{
       assertThatBool([[FakeTaskManager sharedManager] fakeTasksAreEnabled],
-                     equalToBool(YES));
+                     isTrue());
 
       [NSException raise:NSGenericException format:@"An exception."];
     }];
@@ -123,7 +138,7 @@
   // runBlockWithFakeTasks: should still make sure fake tasks get disabled when
   // the block finishes, even if there is an exception.
   assertThatBool([[FakeTaskManager sharedManager] fakeTasksAreEnabled],
-                 equalToBool(NO));
+                 isFalse());
 }
 
 - (void)testCanSetLaunchHandlerBlocksToTickleFakeTasks
@@ -136,7 +151,7 @@
     },
      ]];
 
-    NSTask *task = [CreateTaskInSameProcessGroup() autorelease];
+    NSTask *task = CreateTaskInSameProcessGroup();
     [task setLaunchPath:@"/bin/echo"];
     [task setArguments:@[@"task1"]];
     [task launch];
@@ -163,17 +178,23 @@
     NSDictionary *sdksAndAliases = GetAvailableSDKsAndAliases();
     assertThat(sdksAndAliases,
                equalTo(@{
-                       @"iphoneos" : @"iphoneos6.1",
-                       @"iphoneos6.1" : @"iphoneos6.1",
-                       @"iphonesimulator" : @"iphonesimulator6.1",
-                       @"iphonesimulator5.0" : @"iphonesimulator5.0",
-                       @"iphonesimulator5.1" : @"iphonesimulator5.1",
-                       @"iphonesimulator6.0" : @"iphonesimulator6.0",
-                       @"iphonesimulator6.1" : @"iphonesimulator6.1",
-                       @"macosx" : @"macosx10.8",
-                       @"macosx10.7" : @"macosx10.7",
-                       @"macosx10.8" : @"macosx10.8",
-                       }));
+      @"iphoneos" : @"iphoneos6.1",
+      @"iphoneos6.1" : @"iphoneos6.1",
+      @"iphonesimulator" : @"iphonesimulator6.1",
+      @"iphonesimulator5.0" : @"iphonesimulator5.0",
+      @"iphonesimulator5.1" : @"iphonesimulator5.1",
+      @"iphonesimulator6.0" : @"iphonesimulator6.0",
+      @"iphonesimulator6.1" : @"iphonesimulator6.1",
+      @"macosx" : @"macosx10.8",
+      @"macosx10.7" : @"macosx10.7",
+      @"macosx10.8" : @"macosx10.8",
+      @"/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.7.sdk": @"macosx10.7",
+      @"/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.8.sdk": @"macosx10.8",
+      @"/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS6.1.sdk": @"iphoneos6.1",
+      @"/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator5.1.sdk": @"iphonesimulator5.1",
+      @"/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator6.0.sdk": @"iphonesimulator6.0",
+      @"/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator6.1.sdk": @"iphonesimulator5.0",
+    }));
 
     // Both of the above should be in the allLaunchedTasks list.  Since XcodeDeveloperDirPath()
     // is called by GetAvailableSDKsAndAliases(), it will show up twice.

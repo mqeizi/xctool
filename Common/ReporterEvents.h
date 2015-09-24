@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -49,6 +49,7 @@
 
 #define kReporter_BeginOCUnit_BundleNameKey @"bundleName"
 #define kReporter_BeginOCUnit_SDKNameKey @"sdkName"
+#define kReporter_BeginOCUnit_DeviceNameKey @"deviceName"
 #define kReporter_BeginOCUnit_TestTypeKey @"testType"
 #define kReporter_BeginOCUnit_TargetNameKey @"targetName"
 
@@ -128,6 +129,7 @@
 #define kReporter_AnalyzerResult_ColumnKey @"col"
 #define kReporter_AnalyzerResult_DescriptionKey @"description"
 #define kReporter_AnalyzerResult_ContextKey @"context"
+#define kReporter_AnalyzerResult_CategoryKey @"category"
+#define kReporter_AnalyzerResult_TypeKey @"type"
 
 #define kReporter_OutputBeforeTestBundleStarts_OutputKey @"output"
-

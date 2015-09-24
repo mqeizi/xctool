@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,14 +14,14 @@
 // limitations under the License.
 //
 
-#import <SenTestingKit/SenTestingKit.h>
+#import <XCTest/XCTest.h>
 
 #import "Action.h"
 
 @interface FakeAction : Action
 @property (nonatomic, assign) BOOL showHelp;
-@property (nonatomic, retain) NSString *name;
-@property (nonatomic, retain) NSMutableArray *numbers;
+@property (nonatomic, copy) NSString *name;
+@property (nonatomic, strong) NSMutableArray *numbers;
 @end
 
 @implementation FakeAction
@@ -39,22 +39,22 @@
            ];
 }
 
-- (id)init
+- (instancetype)init
 {
   if (self = [super init]) {
-    self.numbers = [NSMutableArray array];
+    _numbers = [[NSMutableArray alloc] init];
   }
   return self;
 }
 
 - (void)addNumber:(NSString *)number
 {
-  [self.numbers addObject:@([number intValue])];
+  [_numbers addObject:@([number intValue])];
 }
 
 @end
 
-@interface ActionTests : SenTestCase
+@interface ActionTests : XCTestCase
 @end
 
 @implementation ActionTests
@@ -72,8 +72,8 @@
   NSMutableArray *arguments = [NSMutableArray arrayWithArray:@[
                                @"-help",
                                ]];
-  FakeAction *action = [[[FakeAction alloc] init] autorelease];
-  assertThatBool(action.showHelp, equalToBool(NO));
+  FakeAction *action = [[FakeAction alloc] init];
+  assertThatBool(action.showHelp, isFalse());
 
   NSString *errorMessage = nil;
   NSUInteger consumed = [action consumeArguments:arguments errorMessage:&errorMessage];
@@ -81,7 +81,7 @@
 
   assertThatInteger(consumed, equalToInteger(1));
   assertThatInteger(arguments.count, equalToInteger(0));
-  assertThatBool(action.showHelp, equalToBool(YES));
+  assertThatBool(action.showHelp, isTrue());
 }
 
 - (void)testAliasesAreRespected
@@ -89,8 +89,8 @@
   NSMutableArray *arguments = [NSMutableArray arrayWithArray:@[
                                @"-h",
                                ]];
-  FakeAction *action = [[[FakeAction alloc] init] autorelease];
-  assertThatBool(action.showHelp, equalToBool(NO));
+  FakeAction *action = [[FakeAction alloc] init];
+  assertThatBool(action.showHelp, isFalse());
 
   NSString *errorMessage = nil;
   NSUInteger consumed = [action consumeArguments:arguments errorMessage:&errorMessage];
@@ -98,7 +98,7 @@
 
   assertThatInteger(consumed, equalToInteger(1));
   assertThatInteger(arguments.count, equalToInteger(0));
-  assertThatBool(action.showHelp, equalToBool(YES));
+  assertThatBool(action.showHelp, isTrue());
 }
 
 - (void)testMapOptionSetsValue
@@ -106,7 +106,7 @@
   NSMutableArray *arguments = [NSMutableArray arrayWithArray:@[
                                @"-name", @"SomeName",
                                ]];
-  FakeAction *action = [[[FakeAction alloc] init] autorelease];
+  FakeAction *action = [[FakeAction alloc] init];
 
   NSString *errorMessage = nil;
   NSUInteger consumed = [action consumeArguments:arguments errorMessage:&errorMessage];
@@ -122,7 +122,7 @@
   NSMutableArray *arguments = [NSMutableArray arrayWithArray:@[
                                @"1", @"2",
                                ]];
-  FakeAction *action = [[[FakeAction alloc] init] autorelease];
+  FakeAction *action = [[FakeAction alloc] init];
 
   NSString *errorMessage = nil;
   NSUInteger consumed = [action consumeArguments:arguments errorMessage:&errorMessage];

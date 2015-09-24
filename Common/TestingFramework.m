@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 #import "TestingFramework.h"
 
 NSString *const kTestingFrameworkTestProbeClassName = @"kTestingFrameworkTestProbeClassName";
+NSString *const kTestingFrameworkTestSuiteClassName = @"kTestingFrameworkTestSuiteClassName";
 NSString *const kTestingFrameworkIOSTestrunnerName = @"ios_executable";
 NSString *const kTestingFrameworkOSXTestrunnerName = @"osx_executable";
 NSString *const kTestingFrameworkInvertScopeKey = @"invertScope";
@@ -30,27 +31,28 @@ NSDictionary *FrameworkInfoForExtension(NSString *extension)
     frameworks = @{
       @"octest": @{
         kTestingFrameworkTestProbeClassName: @"SenTestProbe",
-        kTestingFrameworkOSXTestrunnerName: @"Tools/otest",
+        kTestingFrameworkTestSuiteClassName: @"SenTestSuite",
         kTestingFrameworkIOSTestrunnerName: @"usr/bin/otest",
+        kTestingFrameworkOSXTestrunnerName: @"Tools/otest",
         kTestingFrameworkFilterTestArgsKey: @"SenTest",
         kTestingFrameworkInvertScopeKey: @"SenTestInvertScope"
       },
       @"xctest": @{
         kTestingFrameworkTestProbeClassName: @"XCTestProbe",
+        kTestingFrameworkTestSuiteClassName: @"XCTestSuite",
         kTestingFrameworkIOSTestrunnerName: @"usr/bin/xctest",
         kTestingFrameworkOSXTestrunnerName: @"usr/bin/xctest",
         kTestingFrameworkFilterTestArgsKey: @"XCTest",
         kTestingFrameworkInvertScopeKey: @"XCTestInvertScope"
       }
     };
-    [frameworks retain];
   });
   if (![[frameworks allKeys] containsObject:extension]) {
     NSLog(@"The bundle extension '%@' is not supported. The supported extensions are: %@.",
           extension, [frameworks allKeys]);
     return nil;
   }
-  return [frameworks objectForKey:extension];
+  return frameworks[extension];
 }
 
 NSDictionary *FrameworkInfoForTestBundleAtPath (NSString *path)

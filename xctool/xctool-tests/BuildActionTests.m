@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-#import <SenTestingKit/SenTestingKit.h>
+#import <XCTest/XCTest.h>
 
 #import "Action.h"
 #import "FakeTask.h"
@@ -29,7 +29,7 @@
 
 void _CFAutoreleasePoolPrintPools();
 
-@interface BuildActionTests : SenTestCase
+@interface BuildActionTests : XCTestCase
 @end
 
 @implementation BuildActionTests
@@ -50,12 +50,13 @@ void _CFAutoreleasePoolPrintPools();
                                                      settingsPath:TEST_DATA @"TestProject-Library-showBuildSettings.txt"],
     ]];
 
-    XCTool *tool = [[[XCTool alloc] init] autorelease];
+    XCTool *tool = [[XCTool alloc] init];
 
     tool.arguments = @[@"-project", TEST_DATA @"TestProject-Library/TestProject-Library.xcodeproj",
                        @"-scheme", @"TestProject-Library",
                        @"-sdk", @"iphonesimulator6.0",
                        @"build",
+                       @"-reporter", @"plain",
                        ];
 
     [TestUtil runWithFakeStreams:tool];
@@ -82,11 +83,12 @@ void _CFAutoreleasePoolPrintPools();
                                                      settingsPath:TEST_DATA @"TestProject-Library-showBuildSettings.txt"],
      ]];
 
-    XCTool *tool = [[[XCTool alloc] init] autorelease];
+    XCTool *tool = [[XCTool alloc] init];
 
     tool.arguments = @[@"-project", TEST_DATA @"TestProject-Library/TestProject-Library.xcodeproj",
                        @"-scheme", @"TestProject-Library",
                        @"build",
+                       @"-reporter", @"plain",
                        ];
 
     [TestUtil runWithFakeStreams:tool];
@@ -111,11 +113,12 @@ void _CFAutoreleasePoolPrintPools();
                                                  settingsPath:TEST_DATA @"TestWorkspace-Library-TestProject-Library-showBuildSettings.txt"],
      ]];
 
-    XCTool *tool = [[[XCTool alloc] init] autorelease];
+    XCTool *tool = [[XCTool alloc] init];
 
     tool.arguments = @[@"-workspace", TEST_DATA @"TestWorkspace-Library/TestWorkspace-Library.xcworkspace",
                        @"-scheme", @"TestProject-Library",
                        @"build",
+                       @"-reporter", @"plain",
                        ];
 
     [TestUtil runWithFakeStreams:tool];
@@ -140,12 +143,13 @@ void _CFAutoreleasePoolPrintPools();
                                                settingsPath:TEST_DATA @"TestProject-Library-showBuildSettings.txt"],
      ]];
 
-    XCTool *tool = [[[XCTool alloc] init] autorelease];
+    XCTool *tool = [[XCTool alloc] init];
 
     tool.arguments = @[@"-project", TEST_DATA @"TestProject-Library/TestProject-Library.xcodeproj",
                        @"-scheme", @"TestProject-Library",
                        @"-configuration", @"SOME_CONFIGURATION",
                        @"build",
+                       @"-reporter", @"plain",
                        ];
 
     [TestUtil runWithFakeStreams:tool];
@@ -169,20 +173,21 @@ void _CFAutoreleasePoolPrintPools();
        [LaunchHandlers handlerForShowBuildSettingsWithProject:TEST_DATA @"TestProject-Library/TestProject-Library.xcodeproj"
                                                        scheme:@"TestProject-Library"
                                                  settingsPath:TEST_DATA @"TestProject-Library-showBuildSettings.txt"],
-       [[^(FakeTask *task){
+       [^(FakeTask *task){
         if ([[task launchPath] hasSuffix:@"xcodebuild"] &&
             [[task arguments] containsObject:@"build"]) {
           // Pretend the task has a specific exit code.
           [task pretendExitStatusOf:exitStatus];
         }
-      } copy] autorelease],
+      } copy],
        ]];
 
-      XCTool *tool = [[[XCTool alloc] init] autorelease];
+      XCTool *tool = [[XCTool alloc] init];
 
       tool.arguments = @[@"-project", TEST_DATA @"TestProject-Library/TestProject-Library.xcodeproj",
                          @"-scheme", @"TestProject-Library",
                          @"build",
+                         @"-reporter", @"plain",
                          ];
 
       [TestUtil runWithFakeStreams:tool];
@@ -205,14 +210,15 @@ void _CFAutoreleasePoolPrintPools();
      // Make sure -showBuildSettings returns some data
      [LaunchHandlers handlerForShowBuildSettingsWithProject:TEST_DATA @"TestProject-Library-WithDifferentConfigurations/TestProject-Library.xcodeproj"
                                                      scheme:@"TestProject-Library"
-                                               settingsPath:TEST_DATA @"TestProject-Library-WithDifferentConfigurations-showBuildSettings.txt"],
+                                               settingsPath:TEST_DATA @"TestProject-Library-TestProject-Library-showBuildSettings.txt"],
      ]];
 
-    XCTool *tool = [[[XCTool alloc] init] autorelease];
+    XCTool *tool = [[XCTool alloc] init];
 
     tool.arguments = @[@"-project", TEST_DATA @"TestProject-Library-WithDifferentConfigurations/TestProject-Library.xcodeproj",
                        @"-scheme", @"TestProject-Library",
                        @"build",
+                       @"-reporter", @"plain",
                        ];
 
     [TestUtil runWithFakeStreams:tool];
@@ -237,11 +243,12 @@ void _CFAutoreleasePoolPrintPools();
                                                  settingsPath:TEST_DATA @"ProjectsWithDifferentSDKs-ProjectsWithDifferentSDKs-showBuildSettings.txt"],
      ]];
 
-    XCTool *tool = [[[XCTool alloc] init] autorelease];
+    XCTool *tool = [[XCTool alloc] init];
 
     tool.arguments = @[@"-workspace", TEST_DATA @"ProjectsWithDifferentSDKs/ProjectsWithDifferentSDKs.xcworkspace",
                        @"-scheme", @"ProjectsWithDifferentSDKs",
                        @"build",
+                       @"-reporter", @"plain",
                        ];
 
     [TestUtil runWithFakeStreams:tool];

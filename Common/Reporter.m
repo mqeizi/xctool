@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,33 +16,33 @@
 
 #import "Reporter.h"
 
+#import <objc/runtime.h>
 #import <poll.h>
 #import <sys/stat.h>
-#import <objc/runtime.h>
 
 static void ReadFileDescriptorAndOutputLinesToBlock(int inputFD,
                                                     void (^block)(NSString *line))
 {
-  NSMutableString *buffer = [[NSMutableString alloc] initWithCapacity:0];
+  NSMutableData *buffer = [NSMutableData dataWithCapacity:0];
 
   // Split whatever content we have in 'buffer' into lines.
   void (^processBuffer)(void) = ^{
     NSUInteger offset = 0;
-
+    NSData *newlineData = [NSData dataWithBytes:"\n" length:1];
     for (;;) {
-      NSRange newlineRange = [buffer rangeOfString:@"\n"
-                                           options:0
-                                             range:NSMakeRange(offset, [buffer length] - offset)];
+      NSRange newlineRange = [buffer rangeOfData:newlineData
+                                         options:0
+                                           range:NSMakeRange(offset, [buffer length] - offset)];
       if (newlineRange.length == 0) {
         break;
       } else {
-        NSString *line = [buffer substringWithRange:NSMakeRange(offset, newlineRange.location - offset)];
-        block(line);
+        NSData *line = [buffer subdataWithRange:NSMakeRange(offset, newlineRange.location - offset)];
+        block([[NSString alloc] initWithData:line encoding:NSUTF8StringEncoding]);
         offset = newlineRange.location + 1;
       }
     }
 
-    [buffer replaceCharactersInRange:NSMakeRange(0, offset) withString:@""];
+    [buffer replaceBytesInRange:NSMakeRange(0, offset) withBytes:NULL length:0];
   };
 
   const int readBufferSize = 32768;
@@ -55,9 +55,7 @@ static void ReadFileDescriptorAndOutputLinesToBlock(int inputFD,
 
     if (bytesRead > 0) {
       @autoreleasepool {
-        NSString *str = [[NSString alloc] initWithBytes:readBuffer length:bytesRead encoding:NSUTF8StringEncoding];
-        [buffer appendString:str];
-        [str release];
+        [buffer appendBytes:readBuffer length:bytesRead];
 
         processBuffer();
       }
@@ -68,7 +66,6 @@ static void ReadFileDescriptorAndOutputLinesToBlock(int inputFD,
   }
 
   free(readBuffer);
-  [buffer release];
 }
 
 @implementation Reporter
@@ -87,14 +84,13 @@ static void ReadFileDescriptorAndOutputLinesToBlock(int inputFD,
       NSDictionary *dict = [NSJSONSerialization JSONObjectWithData:[line dataUsingEncoding:NSUTF8StringEncoding]
                                                            options:0
                                                              error:&error];
-      NSAssert(dict != nil, @"Failed to decode JSON '%@' with error: %@", line, [error localizedFailureReason]);
+      NSCAssert(dict != nil, @"Failed to decode JSON '%@' with error: %@", line, [error localizedFailureReason]);
       [reporter handleEvent:dict];
     }
   });
 
   [reporter didFinishReporting];
 
-  [reporter release];
 }
 
 - (void)willBeginReporting
@@ -140,7 +136,7 @@ static void ReadFileDescriptorAndOutputLinesToBlock(int inputFD,
   SEL sel = sel_registerName([selectorName UTF8String]);
 
   if ([self respondsToSelector:sel]) {
-    [self performSelector:sel withObject:eventDict];
+    ((void (*)(id, SEL, NSDictionary *))[self methodForSelector:sel])(self, sel, eventDict);
   }
 }
 

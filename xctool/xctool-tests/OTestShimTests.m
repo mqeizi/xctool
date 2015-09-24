@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,20 +14,20 @@
 // limitations under the License.
 //
 
-#import <SenTestingKit/SenTestingKit.h>
+#import <XCTest/XCTest.h>
 
 #import "ContainsAssertionFailure.h"
-#import "OCUnitIOSLogicTestRunner.h"
 #import "OCUnitIOSLogicTestQueryRunner.h"
-#import "OCUnitOSXLogicTestRunner.h"
+#import "OCUnitIOSLogicTestRunner.h"
 #import "OCUnitOSXLogicTestQueryRunner.h"
+#import "OCUnitOSXLogicTestRunner.h"
 #import "ReporterEvents.h"
 #import "TaskUtil.h"
 #import "TestUtil.h"
-#import "XcodeBuildSettings.h"
 #import "XCToolUtil.h"
+#import "XcodeBuildSettings.h"
 
-@interface OTestShimTests : SenTestCase
+@interface OTestShimTests : XCTestCase
 @end
 
 static NSArray *AllTestCasesInTestBundle(NSString *sdkName,
@@ -38,13 +38,14 @@ static NSArray *AllTestCasesInTestBundle(NSString *sdkName,
   NSString *latestSDK = GetAvailableSDKsAndAliases()[sdkName];
   NSString *builtProductsDir = [bundlePath stringByDeletingLastPathComponent];
   NSString *fullProductName = [bundlePath lastPathComponent];
-  NSDictionary *buildSettings = @{
-                                  Xcode_BUILT_PRODUCTS_DIR : builtProductsDir,
-                                  Xcode_FULL_PRODUCT_NAME : fullProductName,
-                                  Xcode_SDK_NAME : latestSDK,
-                                  };
-  OCUnitTestQueryRunner *runner = [[[testQueryClass alloc] initWithBuildSettings:buildSettings
-                                                                     withCpuType:CPU_TYPE_ANY] autorelease];
+  SimulatorInfo *simulatorInfo = [[SimulatorInfo alloc] init];
+  simulatorInfo.buildSettings = @{
+    Xcode_BUILT_PRODUCTS_DIR : builtProductsDir,
+    Xcode_FULL_PRODUCT_NAME : fullProductName,
+    Xcode_SDK_NAME : latestSDK,
+    Xcode_TARGETED_DEVICE_FAMILY : @"1",
+  };
+  OCUnitTestQueryRunner *runner = [[testQueryClass alloc] initWithSimulatorInfo:simulatorInfo];
   NSArray *allTests = [runner runQueryWithError:&error];
   NSCAssert(error == nil, @"Error while querying test cases: %@", error);
 
@@ -90,7 +91,7 @@ static NSTask *OtestShimTask(NSString *platformName,
   // so we can be sure it points to a valid directory based off the true Xcode
   // install location.
 
-  NSDictionary *latestSDKInfo = [GetAvailableSDKsInfo() objectForKey:[platformName lowercaseString]];
+  NSDictionary *latestSDKInfo = GetAvailableSDKsInfo()[[platformName lowercaseString]];
   NSString *platformNameWithVersion = [platformName stringByAppendingString:latestSDKInfo[@"SDKVersion"]];
 
   targetSettings[Xcode_SDKROOT] = [NSString stringWithFormat:@"%@/Platforms/%@.platform/Developer/SDKs/%@.sdk",
@@ -100,21 +101,27 @@ static NSTask *OtestShimTask(NSString *platformName,
 
   // Regardless of whatever is in the build settings, let's pretend and use
   // the latest available SDK.
-  targetSettings[Xcode_SDK_NAME] = [GetAvailableSDKsAndAliases() objectForKey:[platformName lowercaseString]];
+  targetSettings[Xcode_SDK_NAME] = GetAvailableSDKsAndAliases()[[platformName lowercaseString]];
+
+  if (ToolchainIsXcode7OrBetter()) {
+    targetSettings[Xcode_BUILT_PRODUCTS_DIR] = [bundlePath stringByDeletingLastPathComponent];
+    targetSettings[Xcode_FULL_PRODUCT_NAME] = [bundlePath lastPathComponent];
+  }
 
   // set up an OCUnitIOSLogicTestRunner
   OCUnitIOSLogicTestRunner *runner = [[testRunnerClass alloc] initWithBuildSettings:targetSettings
+                                                                      simulatorInfo:[[SimulatorInfo alloc] init]
                                                                    focusedTestCases:focusedTests
                                                                        allTestCases:allTests
                                                                           arguments:@[]
                                                                         environment:@{}
                                                                      freshSimulator:NO
+                                                                     resetSimulator:NO
+                                                          noResetSimulatorOnFailure:NO
                                                                        freshInstall:NO
-                                                                      simulatorType:nil
+                                                                        testTimeout:1
                                                                           reporters:@[]];
-
   NSTask *task = [runner otestTaskWithTestBundle: bundlePath];
-  [runner release];
 
   // Make sure launch path is accessible.
   NSString *launchPath = [task launchPath];
@@ -197,6 +204,11 @@ static NSDictionary *ExtractEvent(NSArray *events, NSString *eventType)
 
 - (void)testSenTestingKitAssertionFailuresInIOSLogicTestsAreNotSilent
 {
+  if (ToolchainIsXcode7OrBetter()) {
+    // octest isn't supported in Xcode 7
+    return;
+  }
+
   NSString *bundlePath = TEST_DATA @"tests-ios-test-bundle/SenTestingKit_Assertion.octest";
   NSString *targetName = @"SenTestingKit_Assertion";
   NSString *settingsPath = TEST_DATA @"TestProject-Assertion-SenTestingKit_Assertion-showBuildSettings.txt";
@@ -247,6 +259,11 @@ static NSDictionary *ExtractEvent(NSArray *events, NSString *eventType)
 
 - (void)testSenTestingKitExpectedAssertionFailuresInIOSLogicTestsAreSilent
 {
+  if (ToolchainIsXcode7OrBetter()) {
+    // octest isn't supported in Xcode 7
+    return;
+  }
+
   NSString *bundlePath = TEST_DATA @"tests-ios-test-bundle/SenTestingKit_Assertion.octest";
   NSString *targetName = @"SenTestingKit_Assertion";
   NSString *settingsPath = TEST_DATA @"TestProject-Assertion-SenTestingKit_Assertion-showBuildSettings.txt";
@@ -293,6 +310,11 @@ static NSDictionary *ExtractEvent(NSArray *events, NSString *eventType)
 
 - (void)testSenTestingKitMissingExpectedAssertionsAreNotSilent
 {
+  if (ToolchainIsXcode7OrBetter()) {
+    // octest isn't supported in Xcode 7
+    return;
+  }
+
   NSString *bundlePath = TEST_DATA @"tests-ios-test-bundle/SenTestingKit_Assertion.octest";
   NSString *targetName = @"SenTestingKit_Assertion";
   NSString *settingsPath = TEST_DATA @"TestProject-Assertion-SenTestingKit_Assertion-showBuildSettings.txt";
@@ -339,6 +361,12 @@ static NSDictionary *ExtractEvent(NSArray *events, NSString *eventType)
 
 - (void)testOutputBeforeTestBundleStartsIsCaptured
 {
+  if (ToolchainIsXcode7OrBetter()) {
+    // octest isn't supported in Xcode 7
+    // TODO: Rewrite test to test xctest bundles.
+    return;
+  }
+
   NSString *bundlePath = TEST_DATA @"TestThatThrowsExceptionOnStart/Build/Products/Debug/TestThatThrowsExceptionOnStart.octest";
   NSString *targetName = @"TestThatThrowsExceptionOnStart";
   NSString *settingsPath = TEST_DATA @"TestThatThrowsExceptionOnStart/TestThatThrowsExceptionOnStart-showBuildSettings.txt";
@@ -352,6 +380,45 @@ static NSDictionary *ExtractEvent(NSArray *events, NSString *eventType)
                       componentsJoinedByString:@""];
 
   assertThat(output, containsString(@"Terminating app due to uncaught exception"));
+}
+
+- (void)testSenTestingKitExceptionIsThrownWhenTestTimeoutIsHit
+{
+  if (ToolchainIsXcode7OrBetter()) {
+    // octest isn't supported in Xcode 7
+    return;
+  }
+
+  NSString *bundlePath = TEST_DATA @"tests-ios-test-bundle/TestProject-LibraryTests.octest";
+  NSString *targetName = @"TestProject-LibraryTests";
+  NSString *settingsPath = TEST_DATA @"TestProject-Library-TestProject-LibraryTests-showBuildSettings.txt";
+  NSArray *testList = @[ @"SomeTests/testTimeout" ];
+
+  NSArray *allTests = AllTestCasesInTestBundleIOS(bundlePath);
+  NSTask *task = OtestShimTaskIOS(settingsPath, targetName, bundlePath, testList, allTests);
+  NSArray *events = RunOtestAndParseResult(task);
+
+  NSDictionary *testOutputEvent = ExtractEvent(events, kReporter_Events_TestOuput);
+  assertThat(testOutputEvent, hasKey(@"output"));
+  NSString *testOutput = testOutputEvent[@"output"];
+  assertThat(testOutput, containsString(@"Test -[SomeTests testTimeout] ran longer than specified test time limit: 1 second(s)"));
+}
+
+- (void)testXCTestExceptionIsThrownWhenTestTimeoutIsHit
+{
+  NSString *bundlePath = TEST_DATA @"tests-ios-test-bundle/TestProject-Library-XCTest-iOSTests.xctest";
+  NSString *targetName = @"TestProject-Library-XCTest-iOSTests";
+  NSString *settingsPath = TEST_DATA @"TestProject-Library-XCTest-iOS-TestProject-Library-XCTest-iOSTests-showBuildSettings-iphoneos.txt";
+  NSArray *testList = @[ @"SomeTests/testTimeout" ];
+
+  NSArray *allTests = AllTestCasesInTestBundleIOS(bundlePath);
+  NSTask *task = OtestShimTaskIOS(settingsPath, targetName, bundlePath, testList, allTests);
+  NSArray *events = RunOtestAndParseResult(task);
+
+  NSDictionary *testOutputEvent = ExtractEvent(events, kReporter_Events_TestOuput);
+  assertThat(testOutputEvent, hasKey(@"output"));
+  NSString *testOutput = testOutputEvent[@"output"];
+  assertThat(testOutput, containsString(@"Test -[SomeTests testTimeout] ran longer than specified test time limit: 1 second(s)"));
 }
 
 @end

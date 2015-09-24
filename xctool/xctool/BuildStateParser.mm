@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -62,7 +62,7 @@
         //    t - time
 
         // the rest of string is a file name, that's all we require for now
-        NSString *filename = [NSString stringWithUTF8String:&buf[1]];
+        NSString *filename = @(&buf[1]);
         if (filename.length) {
           [nodePaths addObject:filename];
         }
@@ -79,7 +79,8 @@
     }
   }
 
-  self.nodes = nodePaths;
+  _nodes = nodePaths;
 }
+
 
 @end

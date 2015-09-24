@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,10 +14,14 @@
 // limitations under the License.
 //
 
-DEVELOPER_PRIVATE_FRAMEWORK_DIR = "$(DEVELOPER_DIR)"/Platforms/iPhoneSimulator.platform/Developer/Library/PrivateFrameworks
+#include "../Configurations/Tests.xcconfig"
 
-// xctool-tests will strongly link iPhoneSimulatorRemoteClient - we don't need
+DEVELOPER_PRIVATE_FRAMEWORKS_DIR = $(DEVELOPER_DIR)/Platforms/iPhoneSimulator.platform/Developer/Library/PrivateFrameworks
+SHARED_FRAMEWORKS_DIR = $(DEVELOPER_DIR)/../SharedFrameworks
+PRIVATE_FRAMEWORKS_DIR = $(DEVELOPER_DIR)/Library/PrivateFrameworks
+OTHER_FRAMEWORKS_DIR = $(DEVELOPER_DIR)/../OtherFrameworks
+XCTOOL_VENDOR_DIR = $(SRCROOT)/../Vendor
+
+// xctool-tests will strongly link these frameworks - we don't need
 // the same dynamic loading magic that the main 'xctool' executable needs.
-OTHER_LDFLAGS = -F$(DEVELOPER_PRIVATE_FRAMEWORK_DIR) -framework iPhoneSimulatorRemoteClient -Wl,-rpath -Wl,$(DEVELOPER_PRIVATE_FRAMEWORK_DIR) -Wl,-rpath -Wl,"$(DEVELOPER_DIR)"/../OtherFrameworks
-
-FRAMEWORK_SEARCH_PATHS = "$(DEVELOPER_LIBRARY_DIR)/Frameworks" "$(SRCROOT)/../Vendor"
+OTHER_LDFLAGS = -F$(SHARED_FRAMEWORKS_DIR) -F$(PRIVATE_FRAMEWORKS_DIR) -framework DVTFoundation -framework DVTiPhoneSimulatorRemoteClient -framework CoreSimulator -Wl,-rpath -Wl,$(SHARED_FRAMEWORKS_DIR) -Wl,-rpath -Wl,$(PRIVATE_FRAMEWORKS_DIR)

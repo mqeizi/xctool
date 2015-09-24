@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@
 
 #import "Testable.h"
 
-@class XcodeSubjectInfo;
+@class SimulatorInfo, XcodeSubjectInfo;
 
 /**
  * TestableExecutionInfo holds all the extra information we have to collect
@@ -29,17 +29,22 @@
 /**
  * The `Testable` this info belongs to.
  */
-@property (nonatomic, retain) Testable *testable;
+@property (nonatomic, strong) Testable *testable;
 
 /**
  * The key/value pairs from `-showBuildSettings` for this testable.
  */
-@property (nonatomic, retain) NSDictionary *buildSettings;
+@property (nonatomic, copy) NSDictionary *buildSettings;
+
+/**
+ * Simulator info used to run the testable.
+ */
+@property (nonatomic, copy) SimulatorInfo *simulatorInfo;
 
 /**
  * Will contain an error message if retrieving build settings with xcodebuild have failed
  */
-@property (nonatomic, retain) NSString *buildSettingsError;
+@property (nonatomic, copy) NSString *buildSettingsError;
 
 /**
  * A list of all test cases in the bundle, the form of:
@@ -47,29 +52,41 @@
  *
  * These are fetched via otest-query.  May be nil if an error occurred.
  */
-@property (nonatomic, retain) NSArray *testCases;
+@property (nonatomic, copy) NSArray *testCases;
 
 /**
  * Will contain an error message if `otest-query` fails.
  */
-@property (nonatomic, retain) NSString *testCasesQueryError;
+@property (nonatomic, copy) NSString *testCasesQueryError;
 
 /**
  * Any arguments that should be passed to otest, with all macros expanded.
  */
-@property (nonatomic, retain) NSArray *expandedArguments;
+@property (nonatomic, copy) NSArray *expandedArguments;
 
 /**
  * Any environment that should be set for otest, with all macros expanded.
  */
-@property (nonatomic, retain) NSDictionary *expandedEnvironment;
+@property (nonatomic, copy) NSDictionary *expandedEnvironment;
+
+/**
+ * Extracts testable build settings from an Xcode project.
+ */
++ (NSDictionary *)testableBuildSettingsForProject:(NSString *)projectPath
+                                           target:(NSString *)target
+                                          objRoot:(NSString *)objRoot
+                                          symRoot:(NSString *)symRoot
+                                sharedPrecompsDir:(NSString *)sharedPrecompsDir
+                             targetedDeviceFamily:(NSString *)targetedDeviceFamily
+                                   xcodeArguments:(NSArray *)xcodeArguments
+                                          testSDK:(NSString *)testSDK
+                                            error:(NSString **)error;
 
 /**
  * @return A populated TestableExecutionInfo instance.
  */
 + (instancetype)infoForTestable:(Testable *)testable
-               xcodeSubjectInfo:(XcodeSubjectInfo *)xcodeSubjectInfo
-            xcodebuildArguments:(NSArray *)xcodebuildArguments
-                        testSDK:(NSString *)testSDK
-                        cpuType:(cpu_type_t)cpuType;
+                  buildSettings:(NSDictionary *)buildSettings
+                  simulatorInfo:(SimulatorInfo *)simulatorInfo;
+
 @end

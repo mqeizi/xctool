@@ -9,7 +9,6 @@
 /* Begin PBXBuildFile section */
 		285C16D317CD1788007FFC0C /* OCHamcrest.framework in CopyFiles */ = {isa = PBXBuildFile; fileRef = 28F48A01179742CA00068E00 /* OCHamcrest.framework */; };
 		285C16D417CD1788007FFC0C /* OCMockito.framework in CopyFiles */ = {isa = PBXBuildFile; fileRef = 28F48A02179742CA00068E00 /* OCMockito.framework */; };
-		2893A95017960CD400EFBD28 /* SenTestingKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2893A94F17960CD400EFBD28 /* SenTestingKit.framework */; };
 		2893A95217960CD400EFBD28 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2893A95117960CD400EFBD28 /* Cocoa.framework */; };
 		2893A95C17960CD400EFBD28 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 2893A95A17960CD400EFBD28 /* InfoPlist.strings */; };
 		2893A96B17960D2000EFBD28 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2893A96A17960D2000EFBD28 /* Foundation.framework */; };
@@ -53,6 +52,12 @@
 		3892D7541815A13400E68652 /* EventGenerator.m in Sources */ = {isa = PBXBuildFile; fileRef = 3892D74F1815A13400E68652 /* EventGenerator.m */; };
 		3892D7551815A13400E68652 /* EventGenerator.m in Sources */ = {isa = PBXBuildFile; fileRef = 3892D74F1815A13400E68652 /* EventGenerator.m */; };
 		3892D7561815A13400E68652 /* EventGenerator.m in Sources */ = {isa = PBXBuildFile; fileRef = 3892D74F1815A13400E68652 /* EventGenerator.m */; };
+		CC8AA20618F368EE00D9F322 /* user-notifications-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = CC8AA20518F368EE00D9F322 /* user-notifications-Info.plist */; };
+		CCC0AAF418EC8A92004FD861 /* UserNotificationsReporter.m in Sources */ = {isa = PBXBuildFile; fileRef = CCC0AAF318EC8A92004FD861 /* UserNotificationsReporter.m */; };
+		CCC0AAF818EC8AC4004FD861 /* Reporter.m in Sources */ = {isa = PBXBuildFile; fileRef = EE61734617E284DD00F02C91 /* Reporter.m */; };
+		CCC0AAFB18EC8AC4004FD861 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2893A96A17960D2000EFBD28 /* Foundation.framework */; };
+		CCC0AB0218EC8C6A004FD861 /* UserNotificationsReporter.m in Sources */ = {isa = PBXBuildFile; fileRef = CCC0AAF318EC8A92004FD861 /* UserNotificationsReporter.m */; };
+		CCC0AB0518EC931C004FD861 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = CCC0AAED18EC8A1F004FD861 /* main.m */; };
 		EE61734717E284DD00F02C91 /* Reporter.m in Sources */ = {isa = PBXBuildFile; fileRef = EE61734617E284DD00F02C91 /* Reporter.m */; };
 		EE61734817E284DD00F02C91 /* Reporter.m in Sources */ = {isa = PBXBuildFile; fileRef = EE61734617E284DD00F02C91 /* Reporter.m */; };
 		EE61734917E284DD00F02C91 /* Reporter.m in Sources */ = {isa = PBXBuildFile; fileRef = EE61734617E284DD00F02C91 /* Reporter.m */; };
@@ -63,6 +68,15 @@
 		EE9E73E317A7323B008A5ED2 /* TestResultCounter.m in Sources */ = {isa = PBXBuildFile; fileRef = EE9E73E217A7323B008A5ED2 /* TestResultCounter.m */; };
 		EE9E73E417A732F0008A5ED2 /* TestResultCounter.m in Sources */ = {isa = PBXBuildFile; fileRef = EE9E73E217A7323B008A5ED2 /* TestResultCounter.m */; };
 		EE9E73E517A73308008A5ED2 /* TestResultCounter.m in Sources */ = {isa = PBXBuildFile; fileRef = EE9E73E217A7323B008A5ED2 /* TestResultCounter.m */; };
+		FD023B1C1959ADA800947C28 /* Reporter.m in Sources */ = {isa = PBXBuildFile; fileRef = EE61734617E284DD00F02C91 /* Reporter.m */; };
+		FD023B1D1959ADA800947C28 /* NSFileHandle+Print.m in Sources */ = {isa = PBXBuildFile; fileRef = 28F489F517973B7100068E00 /* NSFileHandle+Print.m */; };
+		FD023B1F1959ADA800947C28 /* EventGenerator.m in Sources */ = {isa = PBXBuildFile; fileRef = 3892D74F1815A13400E68652 /* EventGenerator.m */; };
+		FD023B221959ADA800947C28 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2893A96A17960D2000EFBD28 /* Foundation.framework */; };
+		FD023B2D1959ADFC00947C28 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = FD023B291959ADFB00947C28 /* main.m */; };
+		FD023B2E1959ADFC00947C28 /* TeamCityReporter.m in Sources */ = {isa = PBXBuildFile; fileRef = FD023B2B1959ADFC00947C28 /* TeamCityReporter.m */; };
+		FD023B2F1959ADFC00947C28 /* TeamCityReporter.m in Sources */ = {isa = PBXBuildFile; fileRef = FD023B2B1959ADFC00947C28 /* TeamCityReporter.m */; };
+		FD3D4AD01959C0D10099B717 /* TeamCityStatusMessageGenerator.m in Sources */ = {isa = PBXBuildFile; fileRef = FD3D4ACF1959C0D10099B717 /* TeamCityStatusMessageGenerator.m */; };
+		FD3D4AD11959C0D10099B717 /* TeamCityStatusMessageGenerator.m in Sources */ = {isa = PBXBuildFile; fileRef = FD3D4ACF1959C0D10099B717 /* TeamCityStatusMessageGenerator.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -131,11 +145,28 @@
 			);
 			runOnlyForDeploymentPostprocessing = 1;
 		};
+		CCC0AAFC18EC8AC4004FD861 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 8;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+		FD023B231959ADA800947C28 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		2893A94C17960CD400EFBD28 /* reporters-tests.octest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "reporters-tests.octest"; sourceTree = BUILT_PRODUCTS_DIR; };
-		2893A94F17960CD400EFBD28 /* SenTestingKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SenTestingKit.framework; path = Library/Frameworks/SenTestingKit.framework; sourceTree = DEVELOPER_DIR; };
+		2893A94C17960CD400EFBD28 /* reporters-tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "reporters-tests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		2893A95117960CD400EFBD28 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
 		2893A95417960CD400EFBD28 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
 		2893A95517960CD400EFBD28 /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = Library/Frameworks/CoreData.framework; sourceTree = SDKROOT; };
@@ -179,10 +210,22 @@
 		28F48A56179750A600068E00 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		3892D74E1815A13400E68652 /* EventGenerator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = EventGenerator.h; path = ../Common/EventGenerator.h; sourceTree = "<group>"; };
 		3892D74F1815A13400E68652 /* EventGenerator.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = EventGenerator.m; path = ../Common/EventGenerator.m; sourceTree = "<group>"; };
+		CC43C4711B79725500AEDFB5 /* reporters-tests.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "reporters-tests.xcconfig"; sourceTree = "<group>"; };
+		CC8AA20518F368EE00D9F322 /* user-notifications-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = "user-notifications-Info.plist"; path = "user-notifications/user-notifications-Info.plist"; sourceTree = "<group>"; };
+		CCC0AAED18EC8A1F004FD861 /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = main.m; path = "user-notifications/main.m"; sourceTree = "<group>"; };
+		CCC0AAF218EC8A92004FD861 /* UserNotificationsReporter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = UserNotificationsReporter.h; path = "user-notifications/UserNotificationsReporter.h"; sourceTree = "<group>"; };
+		CCC0AAF318EC8A92004FD861 /* UserNotificationsReporter.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = UserNotificationsReporter.m; path = "user-notifications/UserNotificationsReporter.m"; sourceTree = "<group>"; };
+		CCC0AB0018EC8AC4004FD861 /* user-notifications */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "user-notifications"; sourceTree = BUILT_PRODUCTS_DIR; };
 		EE61734517E2785F00F02C91 /* Reporter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Reporter.h; path = ../Common/Reporter.h; sourceTree = "<group>"; };
 		EE61734617E284DD00F02C91 /* Reporter.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = Reporter.m; path = ../Common/Reporter.m; sourceTree = "<group>"; };
 		EE9E73E117A7323B008A5ED2 /* TestResultCounter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TestResultCounter.h; sourceTree = "<group>"; };
 		EE9E73E217A7323B008A5ED2 /* TestResultCounter.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TestResultCounter.m; sourceTree = "<group>"; };
+		FD023B271959ADA900947C28 /* teamcity */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = teamcity; sourceTree = BUILT_PRODUCTS_DIR; };
+		FD023B291959ADFB00947C28 /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = main.m; path = teamcity/main.m; sourceTree = "<group>"; };
+		FD023B2A1959ADFB00947C28 /* TeamCityReporter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TeamCityReporter.h; path = teamcity/TeamCityReporter.h; sourceTree = "<group>"; };
+		FD023B2B1959ADFC00947C28 /* TeamCityReporter.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TeamCityReporter.m; path = teamcity/TeamCityReporter.m; sourceTree = "<group>"; };
+		FD3D4ACE1959C0D10099B717 /* TeamCityStatusMessageGenerator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TeamCityStatusMessageGenerator.h; path = teamcity/TeamCityStatusMessageGenerator.h; sourceTree = "<group>"; };
+		FD3D4ACF1959C0D10099B717 /* TeamCityStatusMessageGenerator.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TeamCityStatusMessageGenerator.m; path = teamcity/TeamCityStatusMessageGenerator.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -192,7 +235,6 @@
 			files = (
 				28F48A03179742CA00068E00 /* OCHamcrest.framework in Frameworks */,
 				28F48A04179742CA00068E00 /* OCMockito.framework in Frameworks */,
-				2893A95017960CD400EFBD28 /* SenTestingKit.framework in Frameworks */,
 				2893A95217960CD400EFBD28 /* Cocoa.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -245,6 +287,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CCC0AAFA18EC8AC4004FD861 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CCC0AAFB18EC8AC4004FD861 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FD023B211959ADA800947C28 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FD023B221959ADA800947C28 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -252,14 +310,17 @@
 			isa = PBXGroup;
 			children = (
 				2893A96417960CFD00EFBD28 /* reporters.xcconfig */,
+				CC43C4711B79725500AEDFB5 /* reporters-tests.xcconfig */,
 				2893A97E179614D400EFBD28 /* Common */,
 				28F489CF179725C400068E00 /* reporters */,
 				2893A95717960CD400EFBD28 /* reporters-tests */,
+				FD023B281959ADCD00947C28 /* teamcity */,
 				28F489D0179735B700068E00 /* text */,
 				28F48A0B179743AE00068E00 /* phabricator */,
 				28F48A2417974D4100068E00 /* junit */,
 				28F48A3D17974EF600068E00 /* json-compilation-database */,
 				28F48A55179750A600068E00 /* json-stream */,
+				CCC0AAEC18EC89AE004FD861 /* user-notifications */,
 				2893A94E17960CD400EFBD28 /* Frameworks */,
 				2893A94D17960CD400EFBD28 /* Products */,
 			);
@@ -268,13 +329,15 @@
 		2893A94D17960CD400EFBD28 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				2893A94C17960CD400EFBD28 /* reporters-tests.octest */,
+				2893A94C17960CD400EFBD28 /* reporters-tests.xctest */,
 				2893A96917960D2000EFBD28 /* pretty */,
 				28F489ED1797362400068E00 /* plain */,
 				28F48A09179743AE00068E00 /* phabricator */,
 				28F48A2217974D4100068E00 /* junit */,
 				28F48A3B17974EF600068E00 /* json-compilation-database */,
 				28F48A53179750A600068E00 /* json-stream */,
+				CCC0AB0018EC8AC4004FD861 /* user-notifications */,
+				FD023B271959ADA900947C28 /* teamcity */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -284,7 +347,6 @@
 			children = (
 				28F48A01179742CA00068E00 /* OCHamcrest.framework */,
 				28F48A02179742CA00068E00 /* OCMockito.framework */,
-				2893A94F17960CD400EFBD28 /* SenTestingKit.framework */,
 				2893A95117960CD400EFBD28 /* Cocoa.framework */,
 				2893A96A17960D2000EFBD28 /* Foundation.framework */,
 				2893A95317960CD400EFBD28 /* Other Frameworks */,
@@ -399,6 +461,29 @@
 			path = "json-stream";
 			sourceTree = "<group>";
 		};
+		CCC0AAEC18EC89AE004FD861 /* user-notifications */ = {
+			isa = PBXGroup;
+			children = (
+				CCC0AAED18EC8A1F004FD861 /* main.m */,
+				CCC0AAF218EC8A92004FD861 /* UserNotificationsReporter.h */,
+				CCC0AAF318EC8A92004FD861 /* UserNotificationsReporter.m */,
+				CC8AA20518F368EE00D9F322 /* user-notifications-Info.plist */,
+			);
+			name = "user-notifications";
+			sourceTree = "<group>";
+		};
+		FD023B281959ADCD00947C28 /* teamcity */ = {
+			isa = PBXGroup;
+			children = (
+				FD023B291959ADFB00947C28 /* main.m */,
+				FD023B2A1959ADFB00947C28 /* TeamCityReporter.h */,
+				FD023B2B1959ADFC00947C28 /* TeamCityReporter.m */,
+				FD3D4ACE1959C0D10099B717 /* TeamCityStatusMessageGenerator.h */,
+				FD3D4ACF1959C0D10099B717 /* TeamCityStatusMessageGenerator.m */,
+			);
+			name = teamcity;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -417,8 +502,8 @@
 			);
 			name = "reporters-tests";
 			productName = "reporters-tests";
-			productReference = 2893A94C17960CD400EFBD28 /* reporters-tests.octest */;
-			productType = "com.apple.product-type.bundle";
+			productReference = 2893A94C17960CD400EFBD28 /* reporters-tests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 		2893A96817960D2000EFBD28 /* pretty */ = {
 			isa = PBXNativeTarget;
@@ -522,13 +607,48 @@
 			productReference = 28F48A53179750A600068E00 /* json-stream */;
 			productType = "com.apple.product-type.tool";
 		};
+		CCC0AAF518EC8AC4004FD861 /* user-notifications */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CCC0AAFD18EC8AC4004FD861 /* Build configuration list for PBXNativeTarget "user-notifications" */;
+			buildPhases = (
+				CCC0AAF618EC8AC4004FD861 /* Sources */,
+				CCC0AAFA18EC8AC4004FD861 /* Frameworks */,
+				CCC0AAFC18EC8AC4004FD861 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "user-notifications";
+			productName = "user-notifications";
+			productReference = CCC0AB0018EC8AC4004FD861 /* user-notifications */;
+			productType = "com.apple.product-type.tool";
+		};
+		FD023B1A1959ADA800947C28 /* teamcity */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FD023B241959ADA800947C28 /* Build configuration list for PBXNativeTarget "teamcity" */;
+			buildPhases = (
+				FD023B1B1959ADA800947C28 /* Sources */,
+				FD023B211959ADA800947C28 /* Frameworks */,
+				FD023B231959ADA800947C28 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = teamcity;
+			productName = junit;
+			productReference = FD023B271959ADA900947C28 /* teamcity */;
+			productType = "com.apple.product-type.tool";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
 		2893A93E17960CAD00EFBD28 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0500;
+				LastTestingUpgradeCheck = 0700;
+				LastUpgradeCheck = 0700;
 			};
 			buildConfigurationList = 2893A94117960CAD00EFBD28 /* Build configuration list for PBXProject "reporters" */;
 			compatibilityVersion = "Xcode 3.2";
@@ -549,6 +669,8 @@
 				28F48A2117974D4100068E00 /* junit */,
 				28F48A3A17974EF600068E00 /* json-compilation-database */,
 				28F48A52179750A500068E00 /* json-stream */,
+				CCC0AAF518EC8AC4004FD861 /* user-notifications */,
+				FD023B1A1959ADA800947C28 /* teamcity */,
 			);
 		};
 /* End PBXProject section */
@@ -558,6 +680,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CC8AA20618F368EE00D9F322 /* user-notifications-Info.plist in Resources */,
 				2893A95C17960CD400EFBD28 /* InfoPlist.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -577,13 +700,16 @@
 				28F489F917973B7100068E00 /* FakeFileHandle.m in Sources */,
 				28F48A0017973CF600068E00 /* Reporter+Testing.m in Sources */,
 				28F48A17179743C600068E00 /* PhabricatorReporter.m in Sources */,
+				FD3D4AD01959C0D10099B717 /* TeamCityStatusMessageGenerator.m in Sources */,
 				28F48A1C1797462400068E00 /* PhabricatorReporterTests.m in Sources */,
 				28F48A3217974E3900068E00 /* JUnitReporter.m in Sources */,
+				FD023B2E1959ADFC00947C28 /* TeamCityReporter.m in Sources */,
 				28F48A3517974EA000068E00 /* JUnitReporterTests.m in Sources */,
 				EE61734717E284DD00F02C91 /* Reporter.m in Sources */,
 				28F48A4A17974F3F00068E00 /* JSONCompilationDatabaseReporter.m in Sources */,
 				28F48A4D17974FEB00068E00 /* JSONCompilationDatabaseReporterTests.m in Sources */,
 				EE9E73E317A7323B008A5ED2 /* TestResultCounter.m in Sources */,
+				CCC0AAF418EC8A92004FD861 /* UserNotificationsReporter.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -657,6 +783,29 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CCC0AAF618EC8AC4004FD861 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CCC0AB0518EC931C004FD861 /* main.m in Sources */,
+				CCC0AB0218EC8C6A004FD861 /* UserNotificationsReporter.m in Sources */,
+				CCC0AAF818EC8AC4004FD861 /* Reporter.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FD023B1B1959ADA800947C28 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FD023B1C1959ADA800947C28 /* Reporter.m in Sources */,
+				FD023B1D1959ADA800947C28 /* NSFileHandle+Print.m in Sources */,
+				FD3D4AD11959C0D10099B717 /* TeamCityStatusMessageGenerator.m in Sources */,
+				FD023B1F1959ADA800947C28 /* EventGenerator.m in Sources */,
+				FD023B2D1959ADFC00947C28 /* main.m in Sources */,
+				FD023B2F1959ADFC00947C28 /* TeamCityReporter.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXVariantGroup section */
@@ -675,6 +824,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 2893A96417960CFD00EFBD28 /* reporters.xcconfig */;
 			buildSettings = {
+				ONLY_ACTIVE_ARCH = YES;
 			};
 			name = Debug;
 		};
@@ -687,9 +837,9 @@
 		};
 		2893A96117960CD400EFBD28 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = CC43C4711B79725500AEDFB5 /* reporters-tests.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
@@ -702,6 +852,7 @@
 				FRAMEWORK_SEARCH_PATHS = (
 					"\"$(DEVELOPER_LIBRARY_DIR)/Frameworks\"",
 					"\"$(SRCROOT)/../Vendor\"",
+					"$(inherited)",
 				);
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = NO;
@@ -722,15 +873,14 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
-				WRAPPER_EXTENSION = octest;
 			};
 			name = Debug;
 		};
 		2893A96217960CD400EFBD28 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = CC43C4711B79725500AEDFB5 /* reporters-tests.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
@@ -744,6 +894,7 @@
 				FRAMEWORK_SEARCH_PATHS = (
 					"\"$(DEVELOPER_LIBRARY_DIR)/Frameworks\"",
 					"\"$(SRCROOT)/../Vendor\"",
+					"$(inherited)",
 				);
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
@@ -756,7 +907,6 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
-				WRAPPER_EXTENSION = octest;
 			};
 			name = Release;
 		};
@@ -764,7 +914,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
@@ -796,7 +945,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
@@ -821,7 +969,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
@@ -853,7 +1000,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
@@ -878,7 +1024,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
@@ -910,7 +1055,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
@@ -935,7 +1079,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
@@ -967,7 +1110,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
@@ -992,7 +1134,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
@@ -1024,7 +1165,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
@@ -1049,7 +1189,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
@@ -1081,7 +1220,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
@@ -1098,6 +1236,130 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		CCC0AAFE18EC8AC4004FD861 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_FILE = "user-notifications/user-notifications-Info.plist";
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_LDFLAGS = (
+					"-sectcreate",
+					__TEXT,
+					__info_plist,
+					"$(INFOPLIST_FILE)",
+				);
+				PRODUCT_NAME = "user-notifications";
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		CCC0AAFF18EC8AC4004FD861 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_FILE = "user-notifications/user-notifications-Info.plist";
+				OTHER_LDFLAGS = (
+					"-sectcreate",
+					__TEXT,
+					__info_plist,
+					"$(INFOPLIST_FILE)",
+				);
+				PRODUCT_NAME = "user-notifications";
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		FD023B251959ADA800947C28 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = teamcity;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		FD023B261959ADA800947C28 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				PRODUCT_NAME = teamcity;
 				SDKROOT = macosx;
 			};
 			name = Release;
@@ -1173,6 +1435,24 @@
 			buildConfigurations = (
 				28F48A5D179750A600068E00 /* Debug */,
 				28F48A5E179750A600068E00 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CCC0AAFD18EC8AC4004FD861 /* Build configuration list for PBXNativeTarget "user-notifications" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CCC0AAFE18EC8AC4004FD861 /* Debug */,
+				CCC0AAFF18EC8AC4004FD861 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		FD023B241959ADA800947C28 /* Build configuration list for PBXNativeTarget "teamcity" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FD023B251959ADA800947C28 /* Debug */,
+				FD023B261959ADA800947C28 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

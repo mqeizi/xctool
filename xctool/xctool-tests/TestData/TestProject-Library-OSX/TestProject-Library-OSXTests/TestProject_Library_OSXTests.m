@@ -12,31 +12,18 @@
 
 @implementation TestProject_Library_OSXTests
 
-- (void)setUp
+- (void)testWillPass
 {
-    [super setUp];
-
-    // Set-up code here.
+  XCTAssertEqualObjects(@"1", @"1", @"Equal!");
 }
 
-- (void)tearDown
+- (void)testWillFail
 {
-    // Tear-down code here.
-
-    [super tearDown];
+  XCTAssertEqual(1, 2, @"Not Equal!");
 }
 
-
-
-- (void)testWillPass {
-  STAssertEquals(1, 1, @"Equal!");
-}
-
-- (void)testWillFail {
-  STAssertEquals(1, 2, @"Not Equal!");
-}
-
-- (void)testOutput {
+- (void)testOutput
+{
   // Generate output in all the different ways we know of...
   fprintf(stdout, "stdout\n");
   fprintf(stderr, "stderr\n");
@@ -45,6 +32,19 @@
   void *exceptionSymbols[256];
   int numSymbols = backtrace(exceptionSymbols, 256);
   backtrace_symbols_fd(exceptionSymbols, numSymbols, STDERR_FILENO);
+}
+
+- (void)testStandardDirectories
+{
+  NSLog(@"\n"\
+        "============================================================\n" \
+        "   NSHomeDirectory:\n     %@\n" \
+        "   NSTemporaryDirectory:\n     %@\n" \
+        "   Documents:\n     %@\n" \
+        "============================================================\n",
+        NSHomeDirectory(),
+        NSTemporaryDirectory(),
+        [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject]);
 }
 
 @end

@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,22 +22,28 @@
 @property (nonatomic, copy, readonly) NSString *testName;
 @property (nonatomic, readonly) BOOL isStarted;
 @property (nonatomic, readonly) BOOL isFinished;
-@property (nonatomic, readonly) NSMutableArray *tests;
+@property (nonatomic, copy, readonly) NSMutableArray *tests;
 
 - (instancetype)initWithName:(NSString *)name;
 - (instancetype)initWithName:(NSString *)name
                    reporters:(NSArray *)reporters;
 
-- (void)beginTestSuite;
-- (void)endTestSuite;
-- (double)duration;
+- (void)beginTestSuite:(NSDictionary *)event;
+- (void)endTestSuite:(NSDictionary *)event;
 - (void)insertTest:(OCTestEventState *)test atIndex:(NSUInteger)index;
 - (void)addTest:(OCTestEventState *)test;
 - (void)addTestsFromArray:(NSArray *)tests;
 - (OCTestEventState *)runningTest;
 - (NSArray *)unstartedTests;
+- (NSArray *)finishedTests;
+- (NSArray *)unfinishedTests;
 - (OCTestEventState *)getTestWithTestName:(NSString *)name;
 - (unsigned int)testCount;
 - (unsigned int)totalFailures;
+- (unsigned int)totalErrors;
+- (double)testDuration;
+- (double)totalDuration;
+
+- (void)publishEventsForFinishedTests;
 
 @end

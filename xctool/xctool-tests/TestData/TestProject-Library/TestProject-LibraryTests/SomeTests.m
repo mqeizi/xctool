@@ -31,6 +31,19 @@
   NSLog(@"SDK: %@", [UIDevice currentDevice].systemVersion);
 }
 
+- (void)testStandardDirectories
+{
+  NSLog(@"\n"\
+        "============================================================\n" \
+        "   NSHomeDirectory:\n     %@\n" \
+        "   NSTemporaryDirectory:\n     %@\n" \
+        "   Documents:\n     %@\n" \
+        "============================================================\n",
+        NSHomeDirectory(),
+        NSTemporaryDirectory(),
+        [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject]);
+}
+
 - (void)testWillPass
 {
   STAssertTrue(YES, nil);
@@ -63,6 +76,11 @@
   void *exceptionSymbols[256];
   int numSymbols = backtrace(exceptionSymbols, 256);
   backtrace_symbols_fd(exceptionSymbols, numSymbols, STDERR_FILENO);
+}
+
+- (void)testTimeout
+{
+  sleep(15);
 }
 
 @end

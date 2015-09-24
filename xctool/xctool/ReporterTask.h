@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,23 +19,8 @@
 #import "EventSink.h"
 
 @interface ReporterTask : NSObject <EventSink>
-{
-  NSString *_reporterPath;
-  NSString *_outputPath;
 
-  NSFileHandle *_standardOutput;
-  NSFileHandle *_standardError;
-
-  BOOL _outputPathIsFile;
-
-  NSTask *_task;
-  NSPipe *_pipe;
-
-  BOOL _wasOpened;
-  BOOL _wasClosed;
-}
-
-@property (nonatomic, readonly) NSString *reporterPath;
+@property (nonatomic, copy, readonly) NSString *reporterPath;
 
 /**
  @param string Path to reporter executable.

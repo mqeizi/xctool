@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,15 +24,15 @@
   NSTaskTerminationReason _pretendTerminationReason;
 }
 
-@property (nonatomic, retain) NSString *currentDirectoryPath;
-@property (nonatomic, retain) NSString *launchPath;
-@property (nonatomic, retain) NSArray *arguments;
-@property (nonatomic, retain) NSDictionary *environment;
-@property (nonatomic, retain) id standardOutput;
-@property (nonatomic, retain) id standardError;
-@property (nonatomic, assign) int terminationStatus;
-@property (nonatomic, assign) NSTaskTerminationReason terminationReason;
-@property (nonatomic, assign) BOOL isRunning;
+@property (atomic, copy) NSString *currentDirectoryPath;
+@property (atomic, copy) NSString *launchPath;
+@property (atomic, copy) NSArray *arguments;
+@property (atomic, copy) NSDictionary *environment;
+@property (atomic, strong) id standardOutput;
+@property (atomic, strong) id standardError;
+@property (atomic, assign, readonly) int terminationStatus;
+@property (atomic, assign) NSTaskTerminationReason terminationReason;
+@property (atomic, assign) BOOL isRunning;
 
 /**
  * If YES (default), this task will be included in the list of launched

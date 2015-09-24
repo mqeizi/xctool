@@ -1,3 +1,19 @@
+//
+// Copyright 2004-present Facebook. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
 #import "JSONCompilationDatabaseReporter.h"
 
 #import "ReporterEvents.h"
@@ -35,26 +51,25 @@
 
 @end
 
+@interface JSONCompilationDatabaseReporter ()
+@property (nonatomic, copy) NSMutableArray *compiles;
+@property (nonatomic, copy) NSDictionary *currentBuildCommand;
+@property (nonatomic, copy) NSMutableArray *precompiles;
+@end
 
 @implementation JSONCompilationDatabaseReporter
 
-- (id)init
+- (instancetype)init
 {
   self = [super init];
   if (self) {
     _compiles = [[NSMutableArray alloc] init];
-    _precompiles = [[NSMutableArray alloc] init];
     _currentBuildCommand = nil;
+    _precompiles = [[NSMutableArray alloc] init];
   }
   return self;
 }
 
-- (void)dealloc
-{
-  [_precompiles release];
-  [_compiles release];
-  [super dealloc];
-}
 
 - (void)collectEvent:(NSDictionary *)event
 {
@@ -69,7 +84,7 @@
 
 - (void)beginBuildCommand:(NSDictionary *)event
 {
-  _currentBuildCommand = [event retain];
+  _currentBuildCommand = event;
 }
 
 - (void)endBuildCommand:(NSDictionary *)event
@@ -79,7 +94,6 @@
     [self collectEvent:_currentBuildCommand];
   }
 
-  [_currentBuildCommand release];
   _currentBuildCommand = nil;
 }
 
@@ -103,8 +117,6 @@
   [_outputHandle writeData:data];
   [_outputHandle writeData:[@"\n" dataUsingEncoding:NSUTF8StringEncoding]];
 
-  [compilationDatabase release];
-  compilationDatabase = nil;
 }
 
 - (NSDictionary *)convertCompileDictionary:(NSDictionary *)event withPrecompilesLocalMapping:(NSDictionary *)precompilesMapping
@@ -113,11 +125,13 @@
   NSArray *eventBuildcommands = [eventBuildCommand componentsSeparatedByString:@"\n"];
   NSString *rawWorkingDirectory = [eventBuildcommands[1] strip];
   NSString *rawCompilerCommand = nil;
+
   // We know the first line is event tile, the second one is to change to the working directory
   // so we start with the third line, discard lines of setting env variables, then it's compiler command
   for (int i = 2; i < [eventBuildcommands count]; i++) {
     NSString *currentCommand = [eventBuildcommands[i] strip];
-    if (![currentCommand hasPrefix:@"setenv"]) {
+    // on Xcode 5.1, setting env variables is changed from setenv to export
+    if (![currentCommand hasPrefix:@"setenv"] && ![currentCommand hasPrefix:@"export"]) {
       rawCompilerCommand = currentCommand;
       break;
     }
@@ -130,17 +144,25 @@
   NSTextCheckingResult *sourceFileMatch = [rawCompilerCommand firstMatch:@[@"-c \"(.+?)\"", @" -c (.+?) -o"]];
   NSTextCheckingResult *pchMatch = [rawCompilerCommand firstMatch:@[@"-include \"(.+?\\.pch)\"", @"-include (.+?\\.pch)"]];
 
-  if (sourceFileMatch && workingDirectoryMatch && pchMatch) {
-    NSRange cachedPrecompilePathRange = [pchMatch rangeAtIndex:1];
-    NSString *cachedPrecompiledPath = [rawCompilerCommand substringWithRange:cachedPrecompilePathRange];
-    NSString *localPrecompilePath = precompilesMapping[cachedPrecompiledPath];
-    if (localPrecompilePath) {
-      NSMutableDictionary *compile = [[NSMutableDictionary alloc] init];
-      compile[@"directory"] = [rawWorkingDirectory substringWithRange:[workingDirectoryMatch rangeAtIndex:1]];
-      compile[@"command"] = [rawCompilerCommand stringByReplacingCharactersInRange:cachedPrecompilePathRange withString:localPrecompilePath];
-      compile[@"file"] = [rawCompilerCommand substringWithRange:[sourceFileMatch rangeAtIndex:1]];
-      return [compile autorelease];
+  if (sourceFileMatch && workingDirectoryMatch) {
+    NSMutableDictionary *compile = [[NSMutableDictionary alloc] init];
+    compile[@"file"] = [rawCompilerCommand substringWithRange:[sourceFileMatch rangeAtIndex:1]];
+    compile[@"directory"] = [rawWorkingDirectory substringWithRange:[workingDirectoryMatch rangeAtIndex:1]];
+    NSString *convertedCompilerCommand = nil;
+    if (pchMatch) {
+      NSRange cachedPrecompilePathRange = [pchMatch rangeAtIndex:1];
+      NSString *cachedPrecompiledPath = [rawCompilerCommand substringWithRange:cachedPrecompilePathRange];
+      NSString *localPrecompilePath = precompilesMapping[cachedPrecompiledPath];
+      if (localPrecompilePath) {
+        convertedCompilerCommand = [rawCompilerCommand stringByReplacingCharactersInRange:cachedPrecompilePathRange withString:localPrecompilePath];
+      } else {
+        convertedCompilerCommand = rawCompilerCommand;
+      }
+    } else {
+      convertedCompilerCommand = rawCompilerCommand;
     }
+    compile[@"command"] = convertedCompilerCommand;
+    return compile;
   }
   return nil;
 }
@@ -151,26 +173,29 @@
   for (NSDictionary *event in precompiles) {
     NSString *command = event[kReporter_BeginBuildCommand_CommandKey];
     NSArray *commands = [command componentsSeparatedByString:@"\n"];
-    NSString *precompileTitle = [commands[0] strip];
-    NSString *workingDirectory = [commands[1] strip];
+    NSString *precompileCommand = [commands[0] strip];
+    NSString *workingDirectoryCommand = [commands[1] strip];
 
-    NSTextCheckingResult *precompileTitleMatch =
-    [precompileTitle firstMatch:@[@"^ProcessPCH(\\+\\+)? \"(.+)(\\.pch\\.pth|\\.pch\\.pch)\" \"(.+)\\.pch\"",
+    NSTextCheckingResult *precompileMatch =
+    [precompileCommand firstMatch:@[@"^ProcessPCH(\\+\\+)? \"(.+)(\\.pch\\.pth|\\.pch\\.pch)\" \"(.+)\\.pch\"",
      @"^ProcessPCH(\\+\\+)? (.+)(\\.pch\\.pth|\\.pch\\.pch) (.+)\\.pch"]];
-    NSTextCheckingResult *workingDirectoryMatch = [workingDirectory firstMatch:@[@"^cd \"(.+)\"", @"^cd (.+)"]];
+    NSTextCheckingResult *workingDirectoryMatch = [workingDirectoryCommand firstMatch:@[@"^cd \"(.+)\"", @"^cd (.+)"]];
 
-    if (precompileTitleMatch && workingDirectoryMatch) {
-      NSRange firstHalfRange = [precompileTitleMatch rangeAtIndex:2];
-      NSRange secondHalfRange = [precompileTitleMatch rangeAtIndex:4];
-      NSString *cachedPath = [NSString stringWithFormat:@"%@.pch", [precompileTitle substringWithRange:firstHalfRange]];
-      NSString *localPath = [NSString stringWithFormat:@"%@/%@.pch",
-                             [workingDirectory substringWithRange:[workingDirectoryMatch rangeAtIndex:1]],
-                             [precompileTitle substringWithRange:secondHalfRange]];
-      localMapping[cachedPath] = localPath;
+    if (precompileMatch && workingDirectoryMatch) {
+      NSString *cachedPchPath = [precompileCommand substringWithRange:[precompileMatch rangeAtIndex:2]];
+      NSString *sourcePchName = [precompileCommand substringWithRange:[precompileMatch rangeAtIndex:4]];
+      NSString *workingDir = [workingDirectoryCommand substringWithRange:[workingDirectoryMatch rangeAtIndex:1]];
+
+      cachedPchPath = [cachedPchPath stringByAppendingPathExtension:@"pch"];
+      if (![cachedPchPath hasPrefix:@"/"]) {
+        cachedPchPath = [workingDir stringByAppendingPathComponent:cachedPchPath];
+      }
+      NSString *localPath = [NSString stringWithFormat:@"%@/%@.pch", workingDir, sourcePchName];
+      localMapping[cachedPchPath] = localPath;
     }
 
   }
-  return [localMapping autorelease];
+  return localMapping;
 }
 
 @end

@@ -1,3 +1,18 @@
+//
+// Copyright 2004-present Facebook. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 #import "LaunchHandlers.h"
 
@@ -52,7 +67,7 @@ BOOL IsOtestTask(NSTask *task)
                                settingsPath:(NSString *)settingsPath
                                        hide:(BOOL)hide
 {
-  return [[^(FakeTask *task){
+  return [^(FakeTask *task){
     BOOL match = YES;
     match = [[task launchPath] hasSuffix:@"xcodebuild"];
     match &= ArrayContainsSubsequence([task arguments], @[@"-project",
@@ -60,6 +75,7 @@ BOOL IsOtestTask(NSTask *task)
                                                           @"-scheme",
                                                           scheme,
                                                           ]);
+    match &= ![task environment][@"SHOW_ONLY_BUILD_SETTINGS_FOR_TARGET"];
     if (action) {
       match &= ArrayContainsSubsequence([task arguments], @[action, @"-showBuildSettings"]);
     } else {
@@ -76,7 +92,7 @@ BOOL IsOtestTask(NSTask *task)
         [[FakeTaskManager sharedManager] hideTaskFromLaunchedTasks:task];
       }
     }
-  } copy] autorelease];
+  } copy];
 }
 
 + (id)handlerForShowBuildSettingsWithProject:(NSString *)project
@@ -84,7 +100,7 @@ BOOL IsOtestTask(NSTask *task)
                                 settingsPath:(NSString *)settingsPath
                                         hide:(BOOL)hide
 {
-  return [[^(FakeTask *task){
+  return [^(FakeTask *task){
     if ([[task launchPath] hasSuffix:@"xcodebuild"] &&
         ArrayContainsSubsequence([task arguments], @[
                                                      @"-project",
@@ -92,6 +108,7 @@ BOOL IsOtestTask(NSTask *task)
                                                      @"-target",
                                                      target,
                                                      ]) &&
+        [[task environment][@"SHOW_ONLY_BUILD_SETTINGS_FOR_TARGET"] isEqual:target] &&
         [[task arguments] containsObject:@"-showBuildSettings"])
     {
       [task pretendTaskReturnsStandardOutput:
@@ -103,7 +120,7 @@ BOOL IsOtestTask(NSTask *task)
         [[FakeTaskManager sharedManager] hideTaskFromLaunchedTasks:task];
       }
     }
-  } copy] autorelease];
+  } copy];
 }
 
 + (id)handlerForShowBuildSettingsErrorWithProject:(NSString *)project
@@ -111,7 +128,7 @@ BOOL IsOtestTask(NSTask *task)
                                  errorMessagePath:(NSString *)errorMessagePath
                                              hide:(BOOL)hide
 {
-  return [[^(FakeTask *task){
+  return [^(FakeTask *task){
     if ([[task launchPath] hasSuffix:@"xcodebuild"] &&
         ArrayContainsSubsequence([task arguments], @[@"-project",
                                                      project,
@@ -129,7 +146,7 @@ BOOL IsOtestTask(NSTask *task)
         [[FakeTaskManager sharedManager] hideTaskFromLaunchedTasks:task];
       }
     }
-  } copy] autorelease];
+  } copy];
 }
 
 + (id)handlerForShowBuildSettingsWithWorkspace:(NSString *)workspace
@@ -147,7 +164,7 @@ BOOL IsOtestTask(NSTask *task)
                                   settingsPath:(NSString *)settingsPath
                                           hide:(BOOL)hide
 {
-  return [[^(FakeTask *task){
+  return [^(FakeTask *task){
     if ([[task launchPath] hasSuffix:@"xcodebuild"] &&
         ArrayContainsSubsequence([task arguments], @[@"-workspace",
                                                      workspace,
@@ -165,35 +182,66 @@ BOOL IsOtestTask(NSTask *task)
         [[FakeTaskManager sharedManager] hideTaskFromLaunchedTasks:task];
       }
     }
-  } copy] autorelease];
+  } copy];
 }
 
 + (id)handlerForOtestQueryReturningTestList:(NSArray *)testList
 {
-  return [[^(FakeTask *task){
+  return [^(FakeTask *task){
 
     BOOL isOtestQuery = NO;
 
-    if ([[task launchPath] hasSuffix:@"usr/bin/sim"]) {
-      // iOS tests get queried through the 'sim' launcher.
+    if ([[task launchPath] hasSuffix:@"usr/bin/simctl"]) {
+      // iOS tests get queried through the 'simctl' launcher.
       for (NSString *arg in [task arguments]) {
         if ([arg hasSuffix:@"otest-query-ios"]) {
           isOtestQuery = YES;
           break;
         }
       }
-    } else if ([[task launchPath] hasSuffix:@"otest-query-osx"]) {
+    } else if ([[[task launchPath] lastPathComponent] hasPrefix:@"otest-query-"]) {
       isOtestQuery = YES;
     }
 
     if (isOtestQuery) {
       [task pretendExitStatusOf:0];
       [task pretendTaskReturnsStandardOutput:
-       [[[NSString alloc] initWithData:[NSJSONSerialization dataWithJSONObject:testList options:0 error:nil]
-                              encoding:NSUTF8StringEncoding] autorelease]];
+       [[NSString alloc] initWithData:[NSJSONSerialization dataWithJSONObject:testList options:0 error:nil]
+                              encoding:NSUTF8StringEncoding]];
       [[FakeTaskManager sharedManager] hideTaskFromLaunchedTasks:task];
     }
-  } copy] autorelease];
+  } copy];
+}
+
++ (id)handlerForOtestQueryWithTestHost:(NSString *)testHost
+                     returningTestList:(NSArray *)testList
+{
+  return [^(FakeTask *task){
+
+    BOOL isOtestQuery = NO;
+
+    if ([[task launchPath] hasSuffix:@"usr/bin/simctl"]) {
+      // iOS tests get queried through the 'simctl' launcher.
+      if ([task environment][@"SIMCTL_CHILD_OtestQueryBundlePath"]) {
+        for (NSString *arg in [task arguments]) {
+          if ([arg hasSuffix:testHost]) {
+            isOtestQuery = YES;
+            break;
+          }
+        }
+      }
+    } else if ([[task launchPath] isEqualToString:testHost]) {
+      isOtestQuery = YES;
+    }
+
+    if (isOtestQuery) {
+      [task pretendExitStatusOf:0];
+      [task pretendTaskReturnsStandardOutput:
+       [[NSString alloc] initWithData:[NSJSONSerialization dataWithJSONObject:testList options:0 error:nil]
+                              encoding:NSUTF8StringEncoding]];
+      [[FakeTaskManager sharedManager] hideTaskFromLaunchedTasks:task];
+    }
+  } copy];
 }
 
 @end

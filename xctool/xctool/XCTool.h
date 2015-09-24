@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,12 +16,26 @@
 
 #import <Foundation/Foundation.h>
 
+typedef NS_ENUM(NSInteger, XCToolExitStatus) {
+  XCToolAllActionsSucceeded = 0,
+  XCToolActionFailed = 1,
+  XCToolNotCompatibleVersionOfXcode = 2,
+  XCToolArgsFileIsBroken = 3,
+  XCToolArgumentsValidationFailed = 4,
+  XCToolReporterOptionsValidationFailed = 5,
+  XCToolReporterInitializationFailed = 6,
+  XCToolXcodeInfoValidationFailed = 7,
+
+  XCToolHelpShown = 0,
+  XCToolVersionShown = 0,
+};
+
 @interface XCTool : NSObject
 
-@property (nonatomic, retain) NSFileHandle *standardOutput;
-@property (nonatomic, retain) NSFileHandle *standardError;
-@property (nonatomic, retain) NSArray *arguments;
-@property (nonatomic, assign) int exitStatus;
+@property (nonatomic, strong) NSFileHandle *standardOutput;
+@property (nonatomic, strong) NSFileHandle *standardError;
+@property (nonatomic, copy) NSArray *arguments;
+@property (nonatomic, assign) XCToolExitStatus exitStatus;
 
 - (void)run;
 

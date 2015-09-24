@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,19 +16,20 @@
 
 #import <Foundation/Foundation.h>
 
-typedef enum {
+typedef NS_ENUM(NSInteger, OTestExitCode) {
   kSuccess = 0,
   kDLOpenError = 1,
   kBundleOpenError,
   kUnsupportedFramework,
   kClassLoadingError,
   kMissingExecutable,
-} OTestExitCode;
+} ;
 
 // Why FOUNDATION_EXPORT? Read here:
 // http://stackoverflow.com/questions/538996/constants-in-objective-c
 // Internally, it just becomes 'extern'.
 FOUNDATION_EXPORT NSString *const kTestingFrameworkTestProbeClassName;
+FOUNDATION_EXPORT NSString *const kTestingFrameworkTestSuiteClassName;
 FOUNDATION_EXPORT NSString *const kTestingFrameworkIOSTestrunnerName;
 FOUNDATION_EXPORT NSString *const kTestingFrameworkOSXTestrunnerName;
 FOUNDATION_EXPORT NSString *const kTestingFrameworkInvertScopeKey;

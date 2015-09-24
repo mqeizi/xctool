@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,11 +14,20 @@
 // limitations under the License.
 //
 
+#import "OCTestEventState.h"
+
 #import <QuartzCore/QuartzCore.h>
 
 #import "EventGenerator.h"
-#import "OCTestEventState.h"
 #import "ReporterEvents.h"
+
+@interface OCTestEventState ()
+
+@property (nonatomic, assign) CFTimeInterval beginTime;
+@property (nonatomic, copy) NSMutableString *outputToPublish;
+@property (nonatomic, copy) NSMutableString *outputAlreadyPublished;
+
+@end
 
 @implementation OCTestEventState
 
@@ -39,15 +48,6 @@
   return [self initWithInputName:name reporters:@[]];
 }
 
-- (void)dealloc
-{
-  [_className release];
-  [_methodName release];
-  [_outputToPublish release];
-  [_outputAlreadyPublished release];
-  [_result release];
-  [super dealloc];
-}
 
 - (void)parseInputName:(NSString *)name
 {
@@ -116,7 +116,6 @@
         @{kReporter_TestOutput_OutputKey:_outputToPublish})
     ];
     [self stateTestOutput:_outputToPublish];
-    [_outputToPublish release];
     _outputToPublish = nil;
   }
 }
@@ -127,7 +126,7 @@
     [self stateBeginTest];
     [self publishWithEvent:
       EventDictionaryWithNameAndContent(kReporter_Events_BeginTest, @{
-        kReporter_EndTest_TestKey:self.testName,
+        kReporter_EndTest_TestKey:[self testName],
         kReporter_EndTest_ClassNameKey:_className,
         kReporter_EndTest_MethodNameKey:_methodName,
     })];
@@ -137,7 +136,7 @@
     [self stateEndTest:NO result:@"error"];
     [self publishWithEvent:
       EventDictionaryWithNameAndContent(kReporter_Events_EndTest, @{
-        kReporter_EndTest_TestKey:self.testName,
+        kReporter_EndTest_TestKey:[self testName],
         kReporter_EndTest_ClassNameKey:_className,
         kReporter_EndTest_MethodNameKey:_methodName,
         kReporter_EndTest_SucceededKey:@(_isSuccessful),

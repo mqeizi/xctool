@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,28 +19,39 @@
 
 #import "TaskUtil.h"
 #import "TestingFramework.h"
-#import "XcodeBuildSettings.h"
 #import "XCToolUtil.h"
+#import "XcodeBuildSettings.h"
 
 @implementation OCUnitOSXLogicTestRunner
 
-- (NSDictionary *)environmentOverrides
+- (NSMutableDictionary *)environmentOverrides
 {
-  return @{@"DYLD_FRAMEWORK_PATH" : _buildSettings[Xcode_BUILT_PRODUCTS_DIR],
-           @"DYLD_LIBRARY_PATH" : _buildSettings[Xcode_BUILT_PRODUCTS_DIR],
-           @"DYLD_FALLBACK_FRAMEWORK_PATH" : [XcodeDeveloperDirPath() stringByAppendingPathComponent:@"Library/Frameworks"],
-           @"NSUnbufferedIO" : @"YES",
-           @"OBJC_DISABLE_GC" : !_garbageCollection ? @"YES" : @"NO",
-           };
+  NSMutableDictionary *environment = OSXTestEnvironment(_buildSettings);
+  [environment addEntriesFromDictionary:@{
+    @"OBJC_DISABLE_GC" : !_garbageCollection ? @"YES" : @"NO",
+  }];
+  return environment;
 }
 
 - (NSTask *)otestTaskWithTestBundle:(NSString *)testBundlePath
 {
-  NSTask *task = [CreateTaskInSameProcessGroup() autorelease];
+  NSTask *task = CreateTaskInSameProcessGroup();
+
+  NSMutableArray *args = [@[] mutableCopy];
+  NSMutableDictionary *env = [self environmentOverrides];
+  if (ToolchainIsXcode7OrBetter()) {
+    [args addObjectsFromArray:[self commonTestArguments]];
+    [env addEntriesFromDictionary:[self testEnvironmentWithSpecifiedTestConfiguration]];
+  } else {
+    [args addObjectsFromArray:[self testArgumentsWithSpecifiedTestsToRun]];
+    [args addObject:testBundlePath];
+  }
+
   [task setLaunchPath:[XcodeDeveloperDirPath() stringByAppendingPathComponent:_framework[kTestingFrameworkOSXTestrunnerName]]];
+
   // When invoking otest directly, the last arg needs to be the the test bundle.
-  [task setArguments:[[self testArguments] arrayByAddingObject:testBundlePath]];
-  NSMutableDictionary *env = [[self.environmentOverrides mutableCopy] autorelease];
+  [task setArguments:args];
+
   env[@"DYLD_INSERT_LIBRARIES"] = [XCToolLibPath() stringByAppendingPathComponent:@"otest-shim-osx.dylib"];
   [task setEnvironment:[self otestEnvironmentWithOverrides:env]];
   return task;
@@ -48,10 +59,11 @@
 
 - (void)runTestsAndFeedOutputTo:(void (^)(NSString *))outputLineBlock
                    startupError:(NSString **)startupError
+                    otherErrors:(NSString **)otherErrors
 {
   NSAssert([_buildSettings[Xcode_SDK_NAME] hasPrefix:@"macosx"], @"Should be a macosx SDK.");
 
-  NSString *testBundlePath = [self testBundlePath];
+  NSString *testBundlePath = [_simulatorInfo productBundlePath];
   BOOL bundleExists = [[NSFileManager defaultManager] fileExistsAtPath:testBundlePath];
 
   if (IsRunningUnderTest()) {
@@ -63,7 +75,10 @@
     @autoreleasepool {
       NSTask *task = [self otestTaskWithTestBundle:testBundlePath];
       // For OSX test bundles only, Xcode will chdir to the project's directory.
-      [task setCurrentDirectoryPath:_buildSettings[Xcode_PROJECT_DIR]];
+      NSString *projectDir = _buildSettings[Xcode_PROJECT_DIR];
+      if (projectDir) {
+        [task setCurrentDirectoryPath:projectDir];
+      }
 
       LaunchTaskAndFeedOuputLinesToBlock(task,
                                          @"running otest/xctest on test bundle",

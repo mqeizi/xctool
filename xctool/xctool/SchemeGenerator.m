@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,32 +18,30 @@
 
 #import "XCToolUtil.h"
 
+@interface SchemeGenerator ()
+@property (nonatomic, copy) NSMutableArray *buildables;
+@property (nonatomic, copy) NSMutableSet *projectPaths;
+
+@end
+
 @implementation SchemeGenerator {
-  NSMutableArray *_buildables;
-  NSMutableSet *_projectPaths;
 }
 
 + (SchemeGenerator *)schemeGenerator
 {
-  return [[[SchemeGenerator alloc] init] autorelease];
+  return [[SchemeGenerator alloc] init];
 }
 
 - (instancetype)init
 {
   self = [super init];
   if (self) {
-    _buildables = [[NSMutableArray array] retain];
-    _projectPaths = [[NSMutableSet set] retain];
+    _buildables = [[NSMutableArray alloc] init];
+    _projectPaths = [[NSMutableSet alloc] init];
   }
   return self;
 }
 
-- (void)dealloc
-{
-  [_buildables release];
-  [_projectPaths release];
-  [super dealloc];
-}
 
 - (void)addBuildableWithID:(NSString *)identifier
                  inProject:(NSString *)projectPath
@@ -71,6 +69,9 @@
 - (BOOL)writeWorkspaceNamed:(NSString *)name
                          to:(NSString *)destination
 {
+  void (^errorBlock)(NSError *) = ^(NSError *error){
+    NSLog(@"Error creating temporary workspace: %@", error.localizedFailureReason);
+  };
   NSError *err = nil;
 
   NSString *workspacePath = [destination stringByAppendingPathComponent:[name stringByAppendingPathExtension:@"xcworkspace"]];
@@ -81,7 +82,8 @@
                           attributes:@{}
                                error:&err];
   if (err) {
-    goto err;
+    errorBlock(err);
+    return NO;
   }
 
   [[[self _workspaceDocument] XMLStringWithOptions:NSXMLNodePrettyPrint]
@@ -90,7 +92,8 @@
    encoding:NSUTF8StringEncoding
    error:&err];
   if (err) {
-    goto err;
+    errorBlock(err);
+    return NO;
   }
 
   NSString * schemeDirPath = [workspacePath stringByAppendingPathComponent:@"xcshareddata/xcschemes"];
@@ -99,7 +102,8 @@
                           attributes:@{}
                                error:&err];
   if (err) {
-    goto err;
+    errorBlock(err);
+    return NO;
   }
 
   NSString *schemePath = [schemeDirPath stringByAppendingPathComponent:
@@ -110,14 +114,11 @@
    encoding:NSUTF8StringEncoding
    error:nil];
   if (err) {
-    goto err;
+    errorBlock(err);
+    return NO;
   }
 
   return YES;
-
-err:
-  NSLog(@"Error creating temporary workspace: %@", err.localizedFailureReason);
-  return NO;
 }
 
 - (NSXMLDocument *)_workspaceDocument

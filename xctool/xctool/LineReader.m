@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,23 +16,22 @@
 
 #import "LineReader.h"
 
+@interface LineReader ()
+@property (nonatomic, strong) NSFileHandle *fileHandle;
+@property (nonatomic, copy) NSMutableString *buffer;
+@end
+
 @implementation LineReader
 
-- (id)initWithFileHandle:(NSFileHandle *)fileHandle
+- (instancetype)initWithFileHandle:(NSFileHandle *)fileHandle
 {
   if (self = [super init]) {
-    _fileHandle = [fileHandle retain];
+    _fileHandle = fileHandle;
     _buffer = [[NSMutableString alloc] initWithCapacity:0];
   }
   return self;
 }
 
-- (void)dealloc
-{
-  [_fileHandle release];
-  [_buffer release];
-  [super dealloc];
-}
 
 - (void)processBuffer
 {
@@ -47,7 +46,7 @@
       break;
     } else {
       NSString *line = [_buffer substringWithRange:NSMakeRange(offset, newlineRange.location - offset)];
-      self.didReadLineBlock(line);
+      _didReadLineBlock(line);
       offset = newlineRange.location + 1;
     }
   }
@@ -57,7 +56,10 @@
 
 - (void)appendDataToBuffer:(NSData *)data
 {
-  [_buffer appendString:[[[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] autorelease]];
+  NSString *dataToAppend = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+  if (dataToAppend) {
+    [_buffer appendString:dataToAppend];
+  }
 }
 
 - (void)dataAvailableNotification:(NSNotification *)notification

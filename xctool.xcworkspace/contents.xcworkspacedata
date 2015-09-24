@@ -8,9 +8,6 @@
       location = "group:reporters/reporters.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:mobile-installation-helper/mobile-installation-helper.xcodeproj">
-   </FileRef>
-   <FileRef
       location = "group:otest-query/otest-query.xcodeproj">
    </FileRef>
    <FileRef
@@ -18,9 +15,6 @@
    </FileRef>
    <FileRef
       location = "group:otest-shim/otest-shim.xcodeproj">
-   </FileRef>
-   <FileRef
-      location = "group:sim-shim/sim-shim.xcodeproj">
    </FileRef>
    <Group
       location = "group:Common"
@@ -48,7 +42,13 @@
          location = "group:Install.xcconfig">
       </FileRef>
       <FileRef
+         location = "group:iOS.xcconfig">
+      </FileRef>
+      <FileRef
          location = "group:Project.xcconfig">
+      </FileRef>
+      <FileRef
+         location = "group:Tests.xcconfig">
       </FileRef>
    </Group>
 </Workspace>

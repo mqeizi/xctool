@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@
 /**
  Parses a test name like '-[TestClass someMethod]' into its class and method
  name parts.
- 
+
  @param className Out param where class name will be stored.
  @param methodName Out param where method name will be stored.
  @param testName Full name of test, e.g. '-[TestClass someMethod]'

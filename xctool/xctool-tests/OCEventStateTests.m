@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-#import <SenTestingKit/SenTestingKit.h>
+#import <XCTest/XCTest.h>
 
 #import "EventBuffer.h"
 #import "EventSink.h"
@@ -22,21 +22,21 @@
 #import "ReporterEvents.h"
 #import "TestUtil.h"
 
-@interface OCEventStateTests : SenTestCase
+@interface OCEventStateTests : XCTestCase
 @end
 
 @implementation OCEventStateTests
 
 - (void)testParseEvent
 {
-  OCEventState *state = [[[OCEventState alloc] initWithReporters: @[]] autorelease];
-  STAssertEqualObjects([state reporters], @[], @"Reporters are not equal");
+  OCEventState *state = [[OCEventState alloc] initWithReporters: @[]];
+  XCTAssertEqualObjects([state reporters], @[], @"Reporters are not equal");
 }
 
 - (void)testPublishWithEvent
 {
-  EventBuffer *eventBuffer = [[[EventBuffer alloc] init] autorelease];
-  OCEventState *state = [[[OCEventState alloc] initWithReporters:@[eventBuffer]] autorelease];
+  EventBuffer *eventBuffer = [[EventBuffer alloc] init];
+  OCEventState *state = [[OCEventState alloc] initWithReporters:@[eventBuffer]];
 
   NSDictionary *event = @{@"ilove": @"jello"};
   [state publishWithEvent:event];

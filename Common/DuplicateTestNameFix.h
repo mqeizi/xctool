@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -44,7 +44,7 @@
  More conversation on this topic:
  https://github.com/allending/Kiwi/issues/402
  */
-void ApplyDuplicateTestNameFix(NSString *testProbeClassName);
+void ApplyDuplicateTestNameFix(NSString *testProbeClassName, NSString *testSuiteClassName);
 
 /**
  Crawls the (Sen|XC)TestSuite hierarchy and returns a list of (Sen|XC)TestCase

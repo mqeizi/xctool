@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,6 +18,11 @@
 
 #import "XCToolUtil.h"
 
+@interface EventBuffer ()
+@property (nonatomic, strong) id<EventSink> underlyingSink;
+@property (nonatomic, copy) NSMutableArray *bufferedEventData;
+@end
+
 @implementation EventBuffer
 
 + (NSArray *)wrapSinks:(NSArray *)sinks
@@ -31,25 +36,19 @@
 
 + (instancetype)eventBufferForSink:(id<EventSink>)reporter
 {
-  EventBuffer *obj = [[[EventBuffer alloc] init] autorelease];
-  obj->_underlyingSink = [reporter retain];
+  EventBuffer *obj = [[EventBuffer alloc] init];
+  obj.underlyingSink = reporter;
   return obj;
 }
 
 - (instancetype)init
 {
   if (self = [super init]) {
-    _bufferedEventData = [[NSMutableArray array] retain];
+    _bufferedEventData = [[NSMutableArray alloc] init];
   }
   return self;
 }
 
-- (void)dealloc
-{
-  [_underlyingSink release];
-  [_bufferedEventData release];
-  [super dealloc];
-}
 
 - (void)publishDataForEvent:(NSData *)data
 {

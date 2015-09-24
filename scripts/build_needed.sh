@@ -3,7 +3,7 @@
 set -e
 
 # We need an absolute path to the dir we're in.
-XCTOOL_DIR=$(cd $(dirname $0)/..; pwd)
+XCTOOL_DIR=$(cd "$(dirname "$0")/.."; pwd)
 
 # Will be a short git hash or just '.' if we're not in a git repo.
 REVISION=$((\
@@ -19,7 +19,10 @@ else
   HAS_GIT_CHANGES=NO
 fi
 
-BUILD_OUTPUT_DIR="$XCTOOL_DIR"/build/$REVISION
+XCODEBUILD_VERSION=$(xcodebuild -version)
+XCODEBUILD_VERSION=`expr "$XCODEBUILD_VERSION" : '^.*Build version \(.*\)'`
+
+BUILD_OUTPUT_DIR="$XCTOOL_DIR"/build/$REVISION/$XCODEBUILD_VERSION
 XCTOOL_PATH="$BUILD_OUTPUT_DIR"/Products/Release/bin/xctool
 
 if [[ -e "$XCTOOL_PATH" && $REVISION != "." && $HAS_GIT_CHANGES == "NO" && \

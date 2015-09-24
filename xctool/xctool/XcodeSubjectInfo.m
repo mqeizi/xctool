@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 #import "XcodeSubjectInfo.h"
 
 #import "Buildable.h"
+#import "PbxprojReader.h"
 #import "TaskUtil.h"
 #import "Testable.h"
 #import "XCToolUtil.h"
@@ -35,6 +36,8 @@ static NSString *StringByStandardizingPath(NSString *path)
     } else if ([component isEqualToString:@".."] && stack.count > 0 && ![[stack lastObject] isEqualToString:@".."]) {
       [stack removeLastObject];
       continue;
+    } else if ([component isEqualToString:@"/"]) {
+      [stack addObject:@""];
     } else {
       [stack addObject:component];
     }
@@ -42,12 +45,12 @@ static NSString *StringByStandardizingPath(NSString *path)
   return [stack componentsJoinedByString:@"/"];
 }
 
-static NSString *BasePathFromSchemePath(NSString *schemePath) {
+static NSString *ProjectPathFromSchemePath(NSString *schemePath)
+{
   for (;;) {
-    assert(schemePath.length > 0);
+    NSCAssert(schemePath.length > 0, @"Scheme path length should be more then 0: %@", schemePath);
 
     if ([schemePath hasSuffix:@".xcodeproj"] || [schemePath hasSuffix:@".xcworkspace"]) {
-      schemePath = [schemePath stringByDeletingLastPathComponent];
       break;
     }
 
@@ -61,12 +64,39 @@ static NSString *BasePathFromSchemePath(NSString *schemePath) {
   return schemePath;
 }
 
+static NSString *FullPathForBasePathAndRelativePath(NSString *basePath, NSString *relativePath)
+{
+  NSString *fullPath = [basePath stringByAppendingPathComponent:relativePath];
+  NSArray *relativePathComponenets = [relativePath pathComponents];
+  for (NSUInteger l=[relativePathComponenets count]; l>0; l--) {
+    NSString *substring = [NSString pathWithComponents:[relativePathComponenets subarrayWithRange:NSMakeRange(0, l)]];
+    if ([basePath hasSuffix:substring]) {
+      fullPath = [basePath stringByAppendingPathComponent:[relativePath substringFromIndex:[substring length]]];
+      break;
+    }
+  }
+  return fullPath;
+}
+
+static NSString *StandardizedContainerPath(NSString *container, NSString *basePath)
+{
+  static NSString * const kContainerReference = @"container:";
+  NSCAssert([container hasPrefix:kContainerReference], @"Container has unexpected prefix: %@; expected: %@", container, kContainerReference);
+  NSString *containerPath = [container substringFromIndex:kContainerReference.length];
+  return StringByStandardizingPath([basePath stringByAppendingPathComponent:containerPath]);
+}
+
+static NSString *SchemeProjectDirectoryPath(NSString *schemePath)
+{
+  return ProjectBaseDirectoryPath(ProjectPathFromSchemePath(schemePath));
+}
+
 static NSDictionary *BuildConfigurationsByActionForSchemePath(NSString *schemePath)
 {
   NSError *error = nil;
-  NSXMLDocument *doc = [[[NSXMLDocument alloc] initWithContentsOfURL:[NSURL fileURLWithPath:schemePath]
+  NSXMLDocument *doc = [[NSXMLDocument alloc] initWithContentsOfURL:[NSURL fileURLWithPath:schemePath]
                                                              options:0
-                                                               error:&error] autorelease];
+                                                               error:&error];
   if (error != nil) {
     NSLog(@"Error in parsing: %@: %@", schemePath, error);
     abort();
@@ -97,6 +127,10 @@ static NSDictionary *BuildConfigurationsByActionForSchemePath(NSString *schemePa
   return results;
 }
 
+@interface XcodeSubjectInfo ()
+@property (nonatomic, copy) NSDictionary *configurationNameByAction;
+@end
+
 @implementation XcodeSubjectInfo
 
 + (NSArray *)projectPathsInWorkspace:(NSString *)workspacePath
@@ -114,15 +148,17 @@ static NSDictionary *BuildConfigurationsByActionForSchemePath(NSString *schemePa
 
   NSURL *URL = [NSURL fileURLWithPath:path];
   NSError *error = nil;
-  NSXMLDocument *doc = [[[NSXMLDocument alloc] initWithContentsOfURL:URL
-                                                             options:0
-                                                               error:&error] autorelease];
+  NSXMLDocument *doc = [[NSXMLDocument alloc] initWithContentsOfURL:URL
+                                                            options:0
+                                                              error:&error];
   if (error != nil) {
     NSLog(@"Error in parsing: %@: %@", workspacePath, error);
     abort();
   }
 
-  __block NSString *(^fullLocation)(NSXMLNode*, NSString *) = ^(NSXMLNode *node, NSString *containerPath) {
+  __block __weak NSString *(^weak_fullLocation)(NSXMLNode*, NSString *);
+  NSString *(^fullLocation)(NSXMLNode*, NSString *);
+  weak_fullLocation = fullLocation = ^(NSXMLNode *node, NSString *containerPath) {
 
     if (node == nil || ![@[@"FileRef", @"Group", @"Workspace"] containsObject:node.name]) {
       return @"";
@@ -139,7 +175,7 @@ static NSDictionary *BuildConfigurationsByActionForSchemePath(NSString *schemePa
     if ([location hasPrefix:@"container:"]) {
       return [containerPath stringByAppendingPathComponent:locationAfterColon];
     } else if ([location hasPrefix:@"group:"]) {
-      return [fullLocation(node.parent, containerPath) stringByAppendingPathComponent:locationAfterColon];
+      return [weak_fullLocation(node.parent, containerPath) stringByAppendingPathComponent:locationAfterColon];
     } else if ([location hasPrefix:@"self:"]) {
       NSCAssert([[workspacePath lastPathComponent] isEqualToString:@"project.xcworkspace"],
                 @"We only expect to see 'self:' in workspaces nested in xcodeproj's.");
@@ -153,16 +189,29 @@ static NSDictionary *BuildConfigurationsByActionForSchemePath(NSString *schemePa
   };
 
   NSArray *fileRefNodes = [doc nodesForXPath:@"//FileRef" error:nil];
-  NSMutableArray *projectFiles = [NSMutableArray array];
+  NSMutableArray *rootProjectFiles = [NSMutableArray array];
   for (NSXMLElement *node in fileRefNodes) {
     NSString *location = [[node attributeForName:@"location"] stringValue];
 
     if ([location hasSuffix:@".xcodeproj"]) {
-      [projectFiles addObject:StringByStandardizingPath(fullLocation(node, workspaceBasePath))];
+      [rootProjectFiles addObject:StringByStandardizingPath(fullLocation(node, workspaceBasePath))];
     }
   }
+  NSMutableSet *projectFiles = [NSMutableSet setWithArray:rootProjectFiles];
+  for (NSString *projectFilePath in rootProjectFiles) {
+    [projectFiles unionSet:[self projectPathsInProject:projectFilePath]];
+  }
 
-  return projectFiles;
+  return [projectFiles allObjects];
+}
+
++ (NSSet *)projectPathsInProject:(NSString *)projectPath
+{
+  NSMutableSet *projects = [ProjectFilesReferencedInProjectAtPath(projectPath) mutableCopy];
+  for (NSString *innerProjectPath in [projects allObjects]) {
+    [projects unionSet:[self projectPathsInProject:innerProjectPath]];
+  }
+  return projects;
 }
 
 + (NSArray *)schemePathsInWorkspace:(NSString *)workspace
@@ -196,20 +245,16 @@ static NSDictionary *BuildConfigurationsByActionForSchemePath(NSString *schemePa
   }
 
   // Collect user-specific schemes.
-  NSString *userdataPath = [project stringByAppendingPathComponent:@"xcuserdata"];
-  NSArray *userContents = [fm contentsOfDirectoryAtPath:userdataPath
-                                                  error:nil];
-  if (userContents != nil) {
-    for (NSString *file in userContents) {
-      if ([file hasSuffix:@".xcuserdatad"]) {
-        NSString *userSchemesPath = [[userdataPath stringByAppendingPathComponent:file] stringByAppendingPathComponent:@"xcschemes"];
-        NSArray *userSchemesContents = [fm contentsOfDirectoryAtPath:userSchemesPath error:nil];
-
-        for (NSString *file in userSchemesContents) {
-          if ([file hasSuffix:@".xcscheme"]) {
-            [schemes addObject:[userSchemesPath stringByAppendingPathComponent:file]];
-          }
-        }
+  NSString *currentlyLoggedInUserSchemesPath = [NSString pathWithComponents:@[
+    [project stringByAppendingPathComponent:@"xcuserdata"],
+    [NSUserName() stringByAppendingPathExtension:@"xcuserdatad"],
+    @"xcschemes"
+  ]];
+  if ([fm fileExistsAtPath:currentlyLoggedInUserSchemesPath]) {
+    NSArray *userSchemesContents = [fm contentsOfDirectoryAtPath:currentlyLoggedInUserSchemesPath error:nil];
+    for (NSString *file in userSchemesContents) {
+      if ([file hasSuffix:@".xcscheme"]) {
+        [schemes addObject:[currentlyLoggedInUserSchemesPath stringByAppendingPathComponent:file]];
       }
     }
   }
@@ -250,7 +295,7 @@ containsFilesModifiedSince:(NSDate *)sinceDate
 
   NSDictionary *workspaceInfoPlist =
     [NSDictionary dictionaryWithContentsOfFile:[infoPlistURL path]];
-  NSString *result = [workspaceInfoPlist objectForKey:@"WorkspacePath"];
+  NSString *result = workspaceInfoPlist[@"WorkspacePath"];
 
   if ([fm fileExistsAtPath:result]) {
     *workspacePath = result;
@@ -296,7 +341,7 @@ containsFilesModifiedSince:(NSDate *)sinceDate
 
   NSDictionary *xcodePrefs = [NSDictionary dictionaryWithContentsOfFile:
     [@"~/Library/Preferences/com.apple.dt.Xcode.plist" stringByExpandingTildeInPath]];
-  NSString *derivedDataLocation = [xcodePrefs objectForKey:@"IDECustomDerivedDataLocation"] ?:
+  NSString *derivedDataLocation = xcodePrefs[@"IDECustomDerivedDataLocation"] ?:
     [@"~/Library/Developer/Xcode/DerivedData" stringByExpandingTildeInPath];
 
   // This location might be absolute or relative. If relative, we have to search under
@@ -315,8 +360,7 @@ containsFilesModifiedSince:(NSDate *)sinceDate
         NSString *workspacePath;
         if ([self findWorkspacePathForDerivedDataURL:derivedDataWorkspaceURL
                                        workspacePath:&workspacePath]) {
-          [workspacePathModifyDates setObject:modifiedDate
-                                       forKey:workspacePath];
+          workspacePathModifyDates[workspacePath] = modifiedDate;
         }
       }
     }
@@ -345,8 +389,7 @@ containsFilesModifiedSince:(NSDate *)sinceDate
                               modifiedDate:&modifiedDate]) {
         NSArray *workspacePaths = [self workspacePathsForRelativeDerivedDataURL:url];
         for (NSString *workspacePath in workspacePaths) {
-          [workspacePathModifyDates setObject:modifiedDate
-                                       forKey:workspacePath];
+          workspacePathModifyDates[workspacePath] = modifiedDate;
         }
       }
     }
@@ -417,7 +460,7 @@ containsFilesModifiedSince:(NSDate *)sinceDate
            inSchemePaths:[schemePathsSet allObjects]
            targetMatches:&targetMatches]) {
       NSDate *recentlyModifiedWorkspaceDate =
-        [recentlyModifiedWorkspaces objectForKey:containerPath];
+        recentlyModifiedWorkspaces[containerPath];
 
       for (XcodeTargetMatch *targetMatch in targetMatches) {
         BOOL betterMatch;
@@ -459,15 +502,6 @@ containsFilesModifiedSince:(NSDate *)sinceDate
   }
 }
 
-- (void)dealloc
-{
-  self.objRoot = nil;
-  self.symRoot = nil;
-  self.testables = nil;
-  self.buildablesForTest = nil;
-  [_configurationNameByAction release];
-  [super dealloc];
-}
 
 + (BOOL)   findTarget:(NSString *)target
         inSchemePaths:(NSArray *)schemePaths
@@ -477,11 +511,13 @@ containsFilesModifiedSince:(NSDate *)sinceDate
 
   for (NSString *schemePath in schemePaths) {
     NSArray *testables = [self testablesInSchemePath:schemePath
-                                            basePath:BasePathFromSchemePath(schemePath)];
-    for (Testable *testable in testables) {
+                                            basePath:SchemeProjectDirectoryPath(schemePath)];
+    NSArray *buildables = [self buildablesInSchemePath:schemePath
+                                              basePath:SchemeProjectDirectoryPath(schemePath)];
+    for (Testable *testable in [testables arrayByAddingObjectsFromArray:buildables]) {
       if ([testable.target isEqualToString:target]) {
         found = YES;
-        XcodeTargetMatch *match = [[[XcodeTargetMatch alloc] init] autorelease];
+        XcodeTargetMatch *match = [[XcodeTargetMatch alloc] init];
         match.schemeName = [[schemePath lastPathComponent] stringByDeletingPathExtension];
         match.numTargetsInScheme = [self numTargetsInSchemePath:schemePath];
         [targetMatches addObject:match];
@@ -498,9 +534,9 @@ containsFilesModifiedSince:(NSDate *)sinceDate
 + (NSUInteger)numTargetsInSchemePath:(NSString *)schemePath
 {
   NSError *error = nil;
-  NSXMLDocument *doc = [[[NSXMLDocument alloc] initWithContentsOfURL:[NSURL fileURLWithPath:schemePath]
+  NSXMLDocument *doc = [[NSXMLDocument alloc] initWithContentsOfURL:[NSURL fileURLWithPath:schemePath]
                                                              options:0
-                                                               error:&error] autorelease];
+                                                               error:&error];
   if (error != nil) {
     NSLog(@"Error in parsing: %@: %@", schemePath, error);
     abort();
@@ -542,7 +578,7 @@ containsFilesModifiedSince:(NSDate *)sinceDate
   NSAssert(error == nil, @"Failed to get nodes: %@", [error localizedFailureReason]);
 
   NSArray *macroExpansionBuildableReferenceNodes =
-    [doc nodesForXPath:[NSString stringWithFormat:@"//%@//MacroExpansion//BuildableReference",
+    [doc nodesForXPath:[NSString stringWithFormat:@"//%@//MacroExpansion/BuildableReference",
                         searchAction]
                  error:&error];
   NSAssert(error == nil, @"Failed to get nodes: %@", [error localizedFailureReason]);
@@ -587,9 +623,7 @@ containsFilesModifiedSince:(NSDate *)sinceDate
     NSString *macroExpansionProjectReferencedContainer =
       [[macroExpansionBuildableReferenceNodes[0] attributeForName:@"ReferencedContainer"] stringValue];
 
-    NSString *projectPath =
-      StringByStandardizingPath([basePath stringByAppendingPathComponent:
-                                 [macroExpansionProjectReferencedContainer substringFromIndex:@"container:".length]]);
+    NSString *projectPath = StandardizedContainerPath(macroExpansionProjectReferencedContainer, basePath);
     if ([[NSFileManager defaultManager] fileExistsAtPath:projectPath]) {
       macroExpansionProjectPath = projectPath;
       macroExpansionTarget = [[macroExpansionBuildableReferenceNodes[0]
@@ -607,9 +641,7 @@ containsFilesModifiedSince:(NSDate *)sinceDate
 
     NSString *referencedContainer =
       [[buildableProductRunnableRefNodes[0] attributeForName:@"ReferencedContainer"] stringValue];
-    NSString *projectPath =
-      StringByStandardizingPath([basePath stringByAppendingPathComponent:
-                                 [referencedContainer substringFromIndex:@"container:".length]]);
+    NSString *projectPath = StandardizedContainerPath(referencedContainer, basePath);
     if ([[NSFileManager defaultManager] fileExistsAtPath:projectPath]) {
       macroExpansionProjectPath = projectPath;
       macroExpansionTarget = [[buildableProductRunnableRefNodes[0] attributeForName:@"BlueprintName"] stringValue];
@@ -627,9 +659,9 @@ containsFilesModifiedSince:(NSDate *)sinceDate
 + (NSArray *)testablesInSchemePath:(NSString *)schemePath basePath:(NSString *)basePath
 {
   NSError *error = nil;
-  NSXMLDocument *doc = [[[NSXMLDocument alloc] initWithContentsOfURL:[NSURL fileURLWithPath:schemePath]
+  NSXMLDocument *doc = [[NSXMLDocument alloc] initWithContentsOfURL:[NSURL fileURLWithPath:schemePath]
                                                              options:0
-                                                               error:&error] autorelease];
+                                                               error:&error];
   if (error != nil) {
     NSLog(@"Error in parsing: %@: %@", schemePath, error);
     abort();
@@ -641,21 +673,20 @@ containsFilesModifiedSince:(NSDate *)sinceDate
   NSArray *testableReferenceNodes = [doc nodesForXPath:@"//TestableReference" error:nil];
 
   NSMutableArray *testables = [NSMutableArray array];
+
   for (NSXMLElement *node in testableReferenceNodes) {
     BOOL skipped =
       [[[node attributeForName:@"skipped"] stringValue] isEqualToString:@"YES"] ? YES : NO;
     NSArray *buildableReferences = [node nodesForXPath:@"BuildableReference" error:nil];
 
-    assert(buildableReferences.count == 1);
+    NSAssert(buildableReferences.count == 1, @"Number of buildable references should be 1: %@", buildableReferences);
     NSXMLElement *buildableReference = buildableReferences[0];
 
     NSString *referencedContainer = [[buildableReference attributeForName:@"ReferencedContainer"] stringValue];
-    assert([referencedContainer hasPrefix:@"container:"]);
-
-    NSString *projectPath = StringByStandardizingPath([basePath stringByAppendingPathComponent:[referencedContainer substringFromIndex:@"container:".length]]);
+    NSString *projectPath = StandardizedContainerPath(referencedContainer, basePath);
     if (![[NSFileManager defaultManager] fileExistsAtPath:projectPath]) {
-      NSLog(@"Error: Scheme %@ base %@ contains reference to non-existent project: %@", schemePath, basePath,projectPath);
-      abort();
+      // Skipping reference to a non-existing project same way as xcodebuild does
+      continue;
     }
 
     NSString *executable = [[buildableReference attributeForName:@"BuildableName"] stringValue];
@@ -679,7 +710,7 @@ containsFilesModifiedSince:(NSDate *)sinceDate
       senTestInvertScope = NO;
     }
 
-    Testable *testable = [[[Testable alloc] init] autorelease];
+    Testable *testable = [[Testable alloc] init];
     testable.projectPath = projectPath;
     testable.target = target;
     testable.targetID = targetID;
@@ -702,9 +733,9 @@ containsFilesModifiedSince:(NSDate *)sinceDate
 + (NSArray *)buildablesInSchemePath:(NSString *)schemePath basePath:(NSString *)basePath
 {
   NSError *error = nil;
-  NSXMLDocument *doc = [[[NSXMLDocument alloc] initWithContentsOfURL:[NSURL fileURLWithPath:schemePath]
+  NSXMLDocument *doc = [[NSXMLDocument alloc] initWithContentsOfURL:[NSURL fileURLWithPath:schemePath]
                                                              options:0
-                                                               error:&error] autorelease];
+                                                               error:&error];
   if (error != nil) {
     NSLog(@"Error in parsing: %@: %@", schemePath, error);
     abort();
@@ -718,16 +749,14 @@ containsFilesModifiedSince:(NSDate *)sinceDate
   for (NSXMLElement *node in buildActionEntryNodes) {
     NSArray *buildableReferences = [node nodesForXPath:@"BuildableReference" error:nil];
 
-    assert(buildableReferences.count == 1);
+    NSAssert(buildableReferences.count == 1, @"Number of buildable references should be 1: %@", buildableReferences);
     NSXMLElement *buildableReference = buildableReferences[0];
 
     NSString *referencedContainer = [[buildableReference attributeForName:@"ReferencedContainer"] stringValue];
-    assert([referencedContainer hasPrefix:@"container:"]);
-
-    NSString *projectPath = StringByStandardizingPath([basePath stringByAppendingPathComponent:[referencedContainer substringFromIndex:@"container:".length]]);
+    NSString *projectPath = StandardizedContainerPath(referencedContainer, basePath);
     if (![[NSFileManager defaultManager] fileExistsAtPath:projectPath]) {
-      NSLog(@"Error: Scheme %@ base %@ contains reference to non-existent project: %@", schemePath, basePath, projectPath);
-      abort();
+      // Skipping reference to a non-existing project same way as xcodebuild does
+      continue;
     }
 
     NSString *target = [[buildableReference attributeForName:@"BlueprintName"] stringValue];
@@ -738,7 +767,7 @@ containsFilesModifiedSince:(NSDate *)sinceDate
     BOOL forTesting = [[[node attributeForName:@"buildForTesting"] stringValue] isEqual:@"YES"];
     BOOL forAnalyzing = [[[node attributeForName:@"buildForAnalyzing"] stringValue] isEqual:@"YES"];
 
-    Buildable *buildable = [[[Buildable alloc] init] autorelease];
+    Buildable *buildable = [[Buildable alloc] init];
     buildable.projectPath = projectPath;
     buildable.target = target;
     buildable.targetID = targetID;
@@ -757,17 +786,17 @@ containsFilesModifiedSince:(NSDate *)sinceDate
  Returns build settings for some target in the scheme.  We don't actually care
  which target's settings are returned, since we only need a few specific values:
  OBJROOT, SYMROOT, SHARED_PRECOMPS_DIR, and EFFECTIVE_PLATFORM_NAME.
- 
+
  If we knew more about Xcode internals, we could probably find a way to query
  these values without calling -showBuildSettings.
  */
 - (NSDictionary *)buildSettingsForATarget
 {
-  NSDictionary *(^buildSettingsWithAction)(NSString *) = ^(NSString *action) {
+  NSDictionary *(^buildSettingsWithAction)(NSString *, NSString **) = ^(NSString *action, NSString **error) {
     NSTask *task = CreateTaskInSameProcessGroup();
     [task setLaunchPath:[XcodeDeveloperDirPath() stringByAppendingPathComponent:@"usr/bin/xcodebuild"]];
     [task setArguments:
-     [self.subjectXcodeBuildArguments arrayByAddingObjectsFromArray:@[action, @"-showBuildSettings"]]];
+     [_subjectXcodeBuildArguments arrayByAddingObjectsFromArray:@[action, @"-showBuildSettings"]]];
     [task setEnvironment:@{
                            @"DYLD_INSERT_LIBRARIES" :
                              [XCToolLibPath() stringByAppendingPathComponent:
@@ -776,8 +805,11 @@ containsFilesModifiedSince:(NSDate *)sinceDate
                            }];
 
     NSDictionary *result = LaunchTaskAndCaptureOutput(task, @"gathering build settings for a target");
-    [task release];
-    
+
+    if (error) {
+      *error = result[@"stderr"];
+    }
+
     return BuildSettingsFromOutput(result[@"stdout"]);
   };
 
@@ -795,23 +827,27 @@ containsFilesModifiedSince:(NSDate *)sinceDate
   // As a workaround for this, we're going to call `-showBuildSettings` with
   // a few different actions until we get one that works.  For our limited purposes,
   // it doesn't really matter which one works.
-  NSArray *actionsToTry;
-  if (ToolchainIsXcode5OrBetter()) {
-    actionsToTry = @[@"build", @"test", @"analyze"];
-  } else {
-    actionsToTry = @[@"build"];
-  }
+  NSArray *actionsToTry = @[@"build", @"test", @"analyze"];
 
+  NSString *errors = @" Errors above occured while running xcodebuild -showBuildSettings:\n";
+  BOOL errored = NO;
   for (NSString *action in actionsToTry) {
-    NSDictionary *settings = buildSettingsWithAction(action);
+    NSString *error = nil;
+    NSDictionary *settings = buildSettingsWithAction(action, &error);
 
     if (settings.count == 1) {
       return settings;
     }
+
+    if (error) {
+      errored = YES;
+      errors = [errors stringByAppendingFormat:@"  %@.\n", error];
+    }
   }
 
   NSAssert(NO, @"Failed while trying to gather build settings for your scheme; "
-               @"tried with actions: %@", [actionsToTry componentsJoinedByString:@", "]);
+               @"tried with actions: %@.%@", [actionsToTry componentsJoinedByString:@", "],
+                                             errored ? errors : @"");
   return nil;
 }
 
@@ -819,9 +855,9 @@ containsFilesModifiedSince:(NSDate *)sinceDate
 {
   NSString *matchingSchemePath = nil;
 
-  NSArray *schemePaths = [XcodeSubjectInfo schemePathsInWorkspace:self.subjectWorkspace];
+  NSArray *schemePaths = [XcodeSubjectInfo schemePathsInWorkspace:_subjectWorkspace];
   for (NSString *schemePath in schemePaths) {
-    if ([schemePath hasSuffix:[NSString stringWithFormat:@"/%@.xcscheme", self.subjectScheme]]) {
+    if ([schemePath hasSuffix:[NSString stringWithFormat:@"/%@.xcscheme", _subjectScheme]]) {
       matchingSchemePath = schemePath;
     }
   }
@@ -833,9 +869,9 @@ containsFilesModifiedSince:(NSDate *)sinceDate
 {
   NSString *matchingSchemePath = nil;
 
-  NSArray *schemePaths = [XcodeSubjectInfo schemePathsInContainer:self.subjectProject];
+  NSArray *schemePaths = [XcodeSubjectInfo schemePathsInContainer:_subjectProject];
   for (NSString *schemePath in schemePaths) {
-    if ([schemePath hasSuffix:[NSString stringWithFormat:@"/%@.xcscheme", self.subjectScheme]]) {
+    if ([schemePath hasSuffix:[NSString stringWithFormat:@"/%@.xcscheme", _subjectScheme]]) {
       matchingSchemePath = schemePath;
     }
   }
@@ -845,58 +881,38 @@ containsFilesModifiedSince:(NSDate *)sinceDate
 
 - (void)populateBuildablesAndTestablesForWorkspaceWithSchemePath:(NSString *)schemePath
 {
-  NSArray *testables = [[self class] testablesInSchemePath:schemePath
-                                                  basePath:BasePathFromSchemePath(schemePath)];
-  NSArray *buildables = [[self class] buildablesInSchemePath:schemePath
-                                                    basePath:BasePathFromSchemePath(schemePath)];
+  _testables = [[self class] testablesInSchemePath:schemePath
+                                          basePath:SchemeProjectDirectoryPath(schemePath)];
+  _buildables = [[self class] buildablesInSchemePath:schemePath
+                                            basePath:SchemeProjectDirectoryPath(schemePath)];
 
-
-  // It's possible that the scheme references projects that aren't part of the workspace.  When
-  // Xcode encounters these, it just skips them so we'll do the same.
-  NSSet *projectPathsInWorkspace = [NSSet setWithArray:[XcodeSubjectInfo projectPathsInWorkspace:self.subjectWorkspace]];
-  BOOL (^workspaceContainsProject)(Buildable *) = ^(Buildable *item) {
-    return [projectPathsInWorkspace containsObject:item.projectPath];
-  };
-
-  self.testables = [testables objectsAtIndexes:
-                    [testables indexesOfObjectsPassingTest:
-                     ^BOOL(Buildable *obj, NSUInteger idx, BOOL *stop) {
-                       return workspaceContainsProject(obj);
-                     }]];
-
-  self.buildables = [buildables objectsAtIndexes:
-                     [buildables indexesOfObjectsPassingTest:
-                      ^BOOL(Buildable *obj, NSUInteger idx, BOOL *stop) {
-                        return workspaceContainsProject(obj);
-                      }]];
-
-  self.buildablesForTest = [buildables objectsAtIndexes:
-                            [buildables indexesOfObjectsPassingTest:
-                             ^BOOL(Buildable *obj, NSUInteger idx, BOOL *stop) {
-                               return (workspaceContainsProject(obj) && obj.buildForTesting);
-                             }]];
+  _buildablesForTest = [_buildables objectsAtIndexes:
+                        [_buildables indexesOfObjectsPassingTest:
+                         ^BOOL(Buildable *obj, NSUInteger idx, BOOL *stop) {
+                           return obj.buildForTesting;
+                         }]];
 }
 
 - (void)populateBuildablesAndTestablesForProjectWithSchemePath:(NSString *)schemePath
 {
-  self.testables = [[self class] testablesInSchemePath:schemePath
-                                              basePath:BasePathFromSchemePath(schemePath)];
+  _testables = [[self class] testablesInSchemePath:schemePath
+                                          basePath:SchemeProjectDirectoryPath(schemePath)];
 
-  self.buildables = [[self class] buildablesInSchemePath:schemePath
-                                                    basePath:BasePathFromSchemePath(schemePath)];
-  self.buildablesForTest = [self.buildables objectsAtIndexes:
-                            [self.buildables indexesOfObjectsPassingTest:
-                             ^BOOL(Buildable *obj, NSUInteger idx, BOOL *stop) {
-                               return obj.buildForTesting;
-                             }]];
+  _buildables = [[self class] buildablesInSchemePath:schemePath
+                                            basePath:SchemeProjectDirectoryPath(schemePath)];
+  _buildablesForTest = [_buildables objectsAtIndexes:
+                        [_buildables indexesOfObjectsPassingTest:
+                         ^BOOL(Buildable *obj, NSUInteger idx, BOOL *stop) {
+                           return obj.buildForTesting;
+                         }]];
 }
 
 - (void)populateBuildActionPropertiesWithSchemePath:(NSString *)schemePath
 {
   NSError *error = nil;
-  NSXMLDocument *doc = [[[NSXMLDocument alloc] initWithContentsOfURL:[NSURL fileURLWithPath:schemePath]
+  NSXMLDocument *doc = [[NSXMLDocument alloc] initWithContentsOfURL:[NSURL fileURLWithPath:schemePath]
                                                              options:0
-                                                               error:&error] autorelease];
+                                                               error:&error];
   if (error != nil) {
     NSLog(@"Error in parsing: %@: %@", schemePath, error);
     abort();
@@ -907,37 +923,47 @@ containsFilesModifiedSince:(NSDate *)sinceDate
   NSAssert([buildActionNodes count] == 1, @"Should have only one BuildAction node");
   NSXMLElement *buildActionNode = buildActionNodes[0];
 
-  self.parallelizeBuildables =
+  _parallelizeBuildables =
     [[[buildActionNode attributeForName:@"parallelizeBuildables"] stringValue] isEqualToString:@"YES"];
-  self.buildImplicitDependencies =
+  _buildImplicitDependencies =
     [[[buildActionNode attributeForName:@"buildImplicitDependencies"] stringValue] isEqualToString:@"YES"];
 }
 
 - (void)loadSubjectInfo
 {
-  assert(self.subjectXcodeBuildArguments != nil);
-  assert(self.subjectScheme != nil);
-  assert(self.subjectWorkspace != nil || self.subjectProject != nil);
+  NSAssert(_subjectXcodeBuildArguments, @"Subject xcode build arguments should be defined.");
+  NSAssert(_subjectScheme, @"Subject scheme should be defined.");
+  NSAssert(_subjectWorkspace || _subjectProject, @"Subject workspace or project should be defined.");
 
   // First we need to know the OBJROOT and SYMROOT settings for the project we're testing.
   NSDictionary *settings = [self buildSettingsForATarget];
   NSDictionary *targetSettings = [settings allValues][0];
+
+  _environmentForScripts = [targetSettings copy];
+
   // The following control where our build output goes - we need to make sure we build the tests
   // in the same places as we built the original products - this is what Xcode does.
-  self.objRoot = targetSettings[Xcode_OBJROOT];
-  self.symRoot = targetSettings[Xcode_SYMROOT];
-  self.sharedPrecompsDir = targetSettings[Xcode_SHARED_PRECOMPS_DIR];
-  self.effectivePlatformName = targetSettings[Xcode_EFFECTIVE_PLATFORM_NAME];
+  _objRoot = targetSettings[Xcode_OBJROOT];
+  _symRoot = targetSettings[Xcode_SYMROOT];
+  _sharedPrecompsDir = targetSettings[Xcode_SHARED_PRECOMPS_DIR];
+  _effectivePlatformName = targetSettings[Xcode_EFFECTIVE_PLATFORM_NAME];
+  _targetedDeviceFamily = targetSettings[Xcode_TARGETED_DEVICE_FAMILY];
 
   NSString *matchingSchemePath = nil;
 
-  if (self.subjectWorkspace) {
+  if (_subjectWorkspace) {
     matchingSchemePath = [self matchingSchemePathForWorkspace];
   } else {
     matchingSchemePath = [self matchingSchemePathForProject];
   }
 
-  if (self.subjectWorkspace) {
+  NSError *error = nil;
+  _actionScripts = [[ActionScripts alloc] initWithSchemePath:matchingSchemePath
+                                                 environment:_environmentForScripts
+                                                       error:&error];
+  NSAssert(!error, @"Error parsing Action Scripts: %@", error);
+
+  if (_subjectWorkspace) {
     [self populateBuildablesAndTestablesForWorkspaceWithSchemePath:matchingSchemePath];
   } else {
     [self populateBuildablesAndTestablesForProjectWithSchemePath:matchingSchemePath];
@@ -946,12 +972,12 @@ containsFilesModifiedSince:(NSDate *)sinceDate
   [self populateBuildActionPropertiesWithSchemePath:matchingSchemePath];
 
   _configurationNameByAction =
-    [BuildConfigurationsByActionForSchemePath(matchingSchemePath) retain];
+    BuildConfigurationsByActionForSchemePath(matchingSchemePath);
 }
 
 - (Testable *)testableWithTarget:(NSString *)target
 {
-  for (Testable *testable in self.testables) {
+  for (Testable *testable in _testables) {
     if ([testable.target isEqualToString:target]) {
       return testable;
     }

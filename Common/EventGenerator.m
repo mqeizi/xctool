@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ NSDictionary *EventDictionaryWithNameAndContent(NSString *name, NSDictionary *co
 {
     NSMutableDictionary *eventJSON = [NSMutableDictionary dictionaryWithDictionary:@{
       @"event": name,
-      kReporter_TimestampKey: [NSNumber numberWithDouble:[[NSDate date] timeIntervalSince1970]]
+      kReporter_TimestampKey: @([[NSDate date] timeIntervalSince1970])
     }];
     [eventJSON addEntriesFromDictionary:content];
     return eventJSON;

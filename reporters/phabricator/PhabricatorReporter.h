@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,12 +21,6 @@
  'arc:unit' diff property in Phabricator.
  */
 @interface PhabricatorReporter : Reporter
-{
-  NSMutableArray *_results;
-  NSMutableArray *_currentTargetFailures;
-  NSDictionary *_currentBuildCommand;
-  NSString *_scheme;
-}
 
 - (NSString *)arcUnitJSON;
 

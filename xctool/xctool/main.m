@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,14 +22,13 @@
 int main(int argc, const char * argv[])
 {
   @autoreleasepool {
-    // xctool depends on iPhoneSimulatorRemoteClient.framework, which is a private
-    // framework for interacting with the simulator that comes bundled with
-    // Xcode.
+    // xctool depends on CoreSimulator.framework which is private framework for
+    // interacting with the simulator that come bundled with Xcode 6 and better.
     //
     // Since xctool can work with multiple verstions of Xcode and since each of
-    // these Xcode versions might live at different paths, we don't want to strongly
-    // link iPhoneSimulatorRemoteClient.framework.  e.g., if we linked to
-    // `/Applications/Xcode.app/.../.../iPhoneSimulatorRemoteClient.framework`
+    // Xcode versions might live at different paths, we don't want to strongly
+    // link this and other frameworks.  e.g., if we linked to
+    // `/Applications/Xcode.app/.../.../CoreSimulator.framework`
     // but Xcode was installed elsewhere, xctool would fail to run.
     //
     // To workaround this, we weak link the framework and at startup, we tweak
@@ -48,20 +47,30 @@ int main(int argc, const char * argv[])
 
       const char *dyldFallbackFrameworkPathKey = "DYLD_FALLBACK_FRAMEWORK_PATH";
 
-      NSString *fallbackFrameworkPath;
-
+      NSMutableArray *fallbackFrameworkPaths = [@[] mutableCopy];
       if (getenv(dyldFallbackFrameworkPathKey)) {
-        fallbackFrameworkPath = [NSString stringWithUTF8String:getenv(dyldFallbackFrameworkPathKey)];
+        [fallbackFrameworkPaths addObject:@(getenv(dyldFallbackFrameworkPathKey))];
       } else {
-        fallbackFrameworkPath = @"";
+        // If unset, this variable takes on an implicit default (see `man dyld`).
+        [fallbackFrameworkPaths addObjectsFromArray:@[
+          @"/Library/Frameworks",
+          @"/Network/Library/Frameworks",
+          @"/System/Library/Frameworks",
+        ]];
       }
 
-      fallbackFrameworkPath = [fallbackFrameworkPath stringByAppendingFormat:@":%@:%@",
-                               // The path to iPhoneSimulatorRemoteClient.framework.
-                               [developerDirPath stringByAppendingPathComponent:@"Platforms/iPhoneSimulator.platform/Developer/Library/PrivateFrameworks"],
-                               // The path to other dependencies of iPhoneSimulatorRemoteClient.framework.
-                               [developerDirPath stringByAppendingPathComponent:@"../OtherFrameworks"]
-                               ];
+      [fallbackFrameworkPaths addObjectsFromArray:@[
+        // Path to CoreSimulator.framework for Xcode 6 and better.
+        [developerDirPath stringByAppendingPathComponent:@"Library/PrivateFrameworks"],
+        // Path to XCTest.framework for Xcode 7 and better.
+        [developerDirPath stringByAppendingPathComponent:@"Platforms/MacOSX.platform/Developer/Library/Frameworks"],
+        // Paths to other dependencies
+        [developerDirPath stringByAppendingPathComponent:@"Platforms/iPhoneSimulator.platform/Developer/Library/PrivateFrameworks"],
+        [developerDirPath stringByAppendingPathComponent:@"../OtherFrameworks"],
+        [developerDirPath stringByAppendingPathComponent:@"../SharedFrameworks"],
+      ]];
+
+      NSString *fallbackFrameworkPath = [fallbackFrameworkPaths componentsJoinedByString:@":"];
       setenv(dyldFallbackFrameworkPathKey, [fallbackFrameworkPath UTF8String], 1);
 
       // Don't do this setup again...
@@ -72,7 +81,7 @@ int main(int argc, const char * argv[])
 
     NSArray *arguments = [[NSProcessInfo processInfo] arguments];
 
-    XCTool *tool = [[[XCTool alloc] init] autorelease];
+    XCTool *tool = [[XCTool alloc] init];
     tool.arguments = [arguments subarrayWithRange:NSMakeRange(1, arguments.count - 1)];
     tool.standardOutput = [NSFileHandle fileHandleWithStandardOutput];
     tool.standardError = [NSFileHandle fileHandleWithStandardError];
@@ -83,4 +92,3 @@ int main(int argc, const char * argv[])
   }
   return 0;
 }
-

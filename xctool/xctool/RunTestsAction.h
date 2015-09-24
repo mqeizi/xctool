@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 //
 
 #import "Action.h"
+#import "TestRunning.h"
 
 /**
  * Break test cases into groups of `bucketSize` test cases.  Test methods in
@@ -34,7 +35,7 @@ NSArray *BucketizeTestCasesByTestCase(NSArray *testCases, int bucketSize);
  */
 NSArray *BucketizeTestCasesByTestClass(NSArray *testCases, int bucketSize);
 
-typedef enum {
+typedef NS_ENUM(NSInteger, BucketBy) {
   // Bucket by individual test case (the most granular option).  Test cases
   // within the same class may be broken into separate buckets.
   //
@@ -47,27 +48,27 @@ typedef enum {
   // be in the same bucket.
   BucketByClass,
 
-} BucketBy;
+} ;
 
-@interface RunTestsAction : Action {
-  int _logicTestBucketSize;
-  int _appTestBucketSize;
-  BucketBy _bucketBy;
-}
+@interface RunTestsAction : Action<TestRunning>
 
 @property (nonatomic, assign) BOOL freshSimulator;
+@property (nonatomic, assign) BOOL resetSimulator;
+@property (nonatomic, assign) BOOL noResetSimulatorOnFailure;
 @property (nonatomic, assign) BOOL freshInstall;
 @property (nonatomic, assign) BOOL parallelize;
 @property (nonatomic, assign) BOOL failOnEmptyTestBundles;
-@property (nonatomic, assign) cpu_type_t cpuType;
-@property (nonatomic, retain) NSString *simulatorType;
-@property (nonatomic, retain) NSString *testSDK;
-@property (nonatomic, retain) NSMutableArray *onlyList;
-@property (nonatomic, retain) NSString *deviceName;
+@property (nonatomic, assign) BOOL listTestsOnly;
+@property (nonatomic, copy) NSString *testSDK;
+@property (nonatomic, strong) NSMutableArray *onlyList;
+@property (nonatomic, strong) NSMutableArray *omitList;
+@property (nonatomic, strong) NSMutableArray *logicTests;
+@property (nonatomic, strong) NSMutableDictionary *appTests;
+@property (nonatomic, copy) NSString *targetedDeviceFamily;
 
-- (void)setLogicTestBucketSize:(NSString *)str;
-- (void)setAppTestBucketSize:(NSString *)str;
-- (void)setBucketBy:(NSString *)str;
+- (void)setLogicTestBucketSizeValue:(NSString *)str;
+- (void)setAppTestBucketSizeValue:(NSString *)str;
+- (void)setBucketByValue:(NSString *)str;
+- (void)setTestTimeoutValue:(NSString *)str;
 
 @end
-

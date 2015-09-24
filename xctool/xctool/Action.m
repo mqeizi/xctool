@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@
   NSMutableDictionary *action =
     [NSMutableDictionary dictionaryWithDictionary:@{
                                 kActionOptionName: name,
-                     kActionOptionSetFlagSelector: [NSString stringWithUTF8String:sel_getName(setFlagSEL)],
+                     kActionOptionSetFlagSelector: @(sel_getName(setFlagSEL)),
      }];
 
   if (aliases) {
@@ -65,7 +65,7 @@
   NSMutableDictionary *action =
   [NSMutableDictionary dictionaryWithDictionary:@{
                               kActionOptionName: name,
-                     kActionOptionMapToSelector: [NSString stringWithUTF8String:sel_getName(mapToSEL)],
+                     kActionOptionMapToSelector: @(sel_getName(mapToSEL)),
    }];
 
   if (aliases) {
@@ -90,7 +90,7 @@
   NSMutableDictionary *action =
   [NSMutableDictionary dictionaryWithDictionary:@{
                       kActionOptionMatcherBlock: matcherBlock,
-                     kActionOptionMapToSelector: [NSString stringWithUTF8String:sel_getName(mapToSEL)],
+                     kActionOptionMapToSelector: @(sel_getName(mapToSEL)),
    }];
 
   if (description) {
@@ -238,4 +238,3 @@
 }
 
 @end
-

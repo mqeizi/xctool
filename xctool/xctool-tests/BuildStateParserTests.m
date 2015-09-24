@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,11 +14,11 @@
 // limitations under the License.
 //
 
-#import <SenTestingKit/SenTestingKit.h>
+#import <XCTest/XCTest.h>
 
 #import "BuildStateParser.h"
 
-@interface BuildStateParserTests : SenTestCase
+@interface BuildStateParserTests : XCTestCase
 @end
 
 @implementation BuildStateParserTests
@@ -26,7 +26,7 @@
 - (void)testExtractNodes
 {
   NSString *testDataPath = TEST_DATA @"example-build-state.dat";
-  BuildStateParser *buildState = [[[BuildStateParser alloc] initWithPath:testDataPath] autorelease];
+  BuildStateParser *buildState = [[BuildStateParser alloc] initWithPath:testDataPath];
   assertThat(buildState.nodes,
              equalTo([NSArray arrayWithContentsOfFile:TEST_DATA @"example-build-state-nodes.plist"]));
 }

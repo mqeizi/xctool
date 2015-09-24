@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,8 +22,8 @@
 
 @interface TestAction ()
 
-@property (nonatomic, retain) BuildTestsAction *buildTestsAction;
-@property (nonatomic, retain) RunTestsAction *runTestsAction;
+@property (nonatomic, strong) BuildTestsAction *buildTestsAction;
+@property (nonatomic, strong) RunTestsAction *runTestsAction;
 
 @end
 
@@ -45,9 +45,16 @@
                            mapTo:@selector(setTestSDK:)],
     [Action actionOptionWithName:@"only"
                          aliases:nil
-                     description:@"SPEC is TARGET[:Class/case[,Class2/case2]]"
+                     description:
+     @"SPEC is TARGET[:Class/case[,Class2/case2]]; use * when specifying class or case prefix."
                        paramName:@"SPEC"
                            mapTo:@selector(addOnly:)],
+    [Action actionOptionWithName:@"omit"
+                         aliases:nil
+                     description:
+     @"SPEC is TARGET[:Class/case[,Class2/case2]]; use * when specifying class or case prefix."
+                       paramName:@"SPEC"
+                           mapTo:@selector(addOmit:)],
     [Action actionOptionWithName:@"skip-deps"
                          aliases:nil
                      description:@"Only build the target, not its dependencies"
@@ -57,6 +64,16 @@
                      description:
      @"Start fresh simulator for each application test target"
                          setFlag:@selector(setFreshSimulator:)],
+    [Action actionOptionWithName:@"resetSimulator"
+                         aliases:nil
+                     description:
+     @"Reset simulator content and settings and restart it before running every app test run."
+                         setFlag:@selector(setResetSimulator:)],
+    [Action actionOptionWithName:@"noResetSimulatorOnFailure"
+                         aliases:nil
+                     description:
+     @"Do not reset simulator content and settings if running failed."
+                         setFlag:@selector(setNoResetSimulatorOnFailure:)],
     [Action actionOptionWithName:@"freshInstall"
                          aliases:nil
                      description:
@@ -85,15 +102,20 @@
                      description:@"Either 'case' (default) or 'class'."
                        paramName:@"BUCKETBY"
                            mapTo:@selector(setBucketBy:)],
-    [Action actionOptionWithName:@"simulator"
+    [Action actionOptionWithName:@"listTestsOnly"
                          aliases:nil
-                     description:@"Set simulator type (either iphone or ipad)"
-                       paramName:@"SIMULATOR"
-                           mapTo:@selector(setSimulatorType:)],
+                     description:@"Skip actual test running and list them only."
+                         setFlag:@selector(setListTestsOnly:)],
+    [Action actionOptionWithName:@"testTimeout"
+                         aliases:nil
+                     description:
+     @"Force individual test cases to be killed after specified timeout."
+                       paramName:@"N"
+                           mapTo:@selector(setTestTimeout:)],
     ];
 }
 
-- (id)init
+- (instancetype)init
 {
   if (self = [super init]) {
     _buildTestsAction = [[BuildTestsAction alloc] init];
@@ -102,25 +124,24 @@
   return self;
 }
 
-- (void)dealloc {
-  self.buildTestsAction = nil;
-  self.runTestsAction = nil;
-  [super dealloc];
-}
-
-- (void)setDeviceName:(NSString *)deviceName
-{
-  [_runTestsAction setDeviceName:deviceName];
-}
-
 - (void)setTestSDK:(NSString *)testSDK
 {
-  _runTestsAction.testSDK = testSDK;
+  [_runTestsAction setTestSDK:testSDK];
 }
 
 - (void)setFreshSimulator:(BOOL)freshSimulator
 {
   [_runTestsAction setFreshSimulator:freshSimulator];
+}
+
+- (void)setResetSimulator:(BOOL)resetSimulator
+{
+  [_runTestsAction setResetSimulator:resetSimulator];
+}
+
+- (void)setNoResetSimulatorOnFailure:(BOOL)noResetSimulatorOnFailure
+{
+  [_runTestsAction setNoResetSimulatorOnFailure:noResetSimulatorOnFailure];
 }
 
 - (void)setFreshInstall:(BOOL)freshInstall
@@ -135,22 +156,17 @@
 
 - (void)setLogicTestBucketSize:(NSString *)bucketSize
 {
-  [_runTestsAction setLogicTestBucketSize:bucketSize];
+  [_runTestsAction setLogicTestBucketSizeValue:bucketSize];
 }
 
 - (void)setAppTestBucketSize:(NSString *)bucketSize
 {
-  [_runTestsAction setAppTestBucketSize:bucketSize];
+  [_runTestsAction setAppTestBucketSizeValue:bucketSize];
 }
 
 - (void)setBucketBy:(NSString *)str
 {
-  [_runTestsAction setBucketBy:str];
-}
-
-- (void)setSimulatorType:(NSString *)simulatorType
-{
-  [_runTestsAction setSimulatorType:simulatorType];
+  [_runTestsAction setBucketByValue:str];
 }
 
 - (void)setSkipDependencies:(BOOL)skipDependencies
@@ -163,17 +179,40 @@
   [_runTestsAction setFailOnEmptyTestBundles:failOnEmptyTestBundles];
 }
 
+- (void)setListTestsOnly:(BOOL)listTestsOnly
+{
+  [_runTestsAction setListTestsOnly:listTestsOnly];
+}
+
+- (void)setTestTimeout:(NSString *)testTimeout
+{
+  [_runTestsAction setTestTimeoutValue:testTimeout];
+}
+
 - (void)addOnly:(NSString *)argument
 {
   // build-tests takes only a target argument, where run-tests takes Target:Class/method.
-  NSString *buildTestsOnlyArg = [[argument componentsSeparatedByString:@":"] objectAtIndex:0];
+  NSString *buildTestsOnlyArg = [argument componentsSeparatedByString:@":"][0];
   [_buildTestsAction.onlyList addObject:buildTestsOnlyArg];
   [_runTestsAction.onlyList addObject:argument];
+}
+
+- (void)addOmit:(NSString *)argument
+{
+  // build-tests takes only a target argument, where run-tests takes Target:Class/method.
+  NSString *buildTestsOmitArg = [argument componentsSeparatedByString:@":"][0];
+  [_buildTestsAction.omitList addObject:buildTestsOmitArg];
+  [_runTestsAction.omitList addObject:argument];
 }
 
 - (NSArray *)onlyList
 {
   return _buildTestsAction.onlyList;
+}
+
+- (NSArray *)omitList
+{
+  return _buildTestsAction.omitList;
 }
 
 - (BOOL)skipDependencies

@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,11 +17,6 @@
 #import "OCEventState.h"
 
 @interface OCTestEventState : OCEventState
-{
-  CFTimeInterval _beginTime;
-  NSMutableString *_outputToPublish;
-  NSMutableString *_outputAlreadyPublished;
-}
 
 @property (nonatomic, copy, readonly) NSString *className;
 @property (nonatomic, copy, readonly) NSString *methodName;
@@ -29,7 +24,7 @@
 @property (nonatomic, readonly) BOOL isStarted;
 @property (nonatomic, readonly) BOOL isFinished;
 @property (nonatomic, readonly) BOOL isSuccessful;
-@property (nonatomic) double duration;
+@property (nonatomic, assign) double duration;
 
 
 /**

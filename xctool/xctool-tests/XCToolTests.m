@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-#import <SenTestingKit/SenTestingKit.h>
+#import <XCTest/XCTest.h>
 
 #import "FakeTask.h"
 #import "FakeTaskManager.h"
@@ -25,7 +25,7 @@
 #import "XCTool.h"
 #import "XCToolUtil.h"
 
-@interface XCToolTests : SenTestCase
+@interface XCToolTests : XCTestCase
 @end
 
 @implementation XCToolTests
@@ -42,35 +42,35 @@
 
 - (void)testCallingWithHelpPrintsUsage
 {
-  XCTool *tool = [[[XCTool alloc] init] autorelease];
+  XCTool *tool = [[XCTool alloc] init];
   tool.arguments = @[@"-help"];
 
   NSDictionary *result = [TestUtil runWithFakeStreams:tool];
 
-  assertThatInt(tool.exitStatus, equalToInt(1));
+  assertThatInt(tool.exitStatus, equalToInteger(XCToolHelpShown));
   assertThat((result[@"stderr"]), startsWith(@"usage: xctool"));
 }
 
 - (void)testCanPrintVersion
 {
-  XCTool *tool = [[[XCTool alloc] init] autorelease];
+  XCTool *tool = [[XCTool alloc] init];
   tool.arguments = @[@"-version"];
 
   NSDictionary *result = [TestUtil runWithFakeStreams:tool];
 
-  assertThatInt(tool.exitStatus, equalToInt(0));
+  assertThatInt(tool.exitStatus, equalToInteger(XCToolVersionShown));
   assertThat((result[@"stdout"]),
              equalTo([NSString stringWithFormat:@"%@\n", XCToolVersionString]));
 }
 
 - (void)testCallingWithNoArgsDefaultsToBuild
 {
-  XCTool *tool = [[[XCTool alloc] init] autorelease];
+  XCTool *tool = [[XCTool alloc] init];
   tool.arguments = @[];
 
   NSDictionary *result = [TestUtil runWithFakeStreams:tool];
 
-  assertThatInt(tool.exitStatus, equalToInt(1));
+  assertThatInt(tool.exitStatus, equalToInteger(XCToolXcodeInfoValidationFailed));
   assertThat((result[@"stderr"]), startsWith(@"ERROR:"));
 }
 
@@ -85,7 +85,7 @@
                                                        hide:NO],
      ]];
 
-    XCTool *tool = [[[XCTool alloc] init] autorelease];
+    XCTool *tool = [[XCTool alloc] init];
 
     tool.arguments = @[@"-project", TEST_DATA @"TestProject-Library/TestProject-Library.xcodeproj",
                        @"-scheme", @"TestProject-Library",
@@ -101,6 +101,7 @@
                        @"-showBuildSettings",
                        ]));
     assertThat(output[@"stdout"], startsWith(@"Build settings"));
+    assertThatInt(tool.exitStatus, equalToInteger(0));
   }];
 }
 

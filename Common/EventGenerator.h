@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,4 +18,3 @@
 #import "ReporterEvents.h"
 
 NSDictionary *EventDictionaryWithNameAndContent(NSString *name, NSDictionary *content);
-

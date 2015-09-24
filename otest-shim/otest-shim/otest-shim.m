@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,28 +14,32 @@
 // limitations under the License.
 //
 
-#import <mach-o/dyld.h>
-#import <mach-o/dyld_images.h>
-#import <objc/message.h>
-#import <objc/runtime.h>
-#import <sys/uio.h>
-
 #import <Foundation/Foundation.h>
+
 #import <SenTestingKit/SenTestingKit.h>
 
-#import "XCTest.h"
+#import <mach-o/dyld.h>
+#import <mach-o/dyld_images.h>
+
+#import <objc/runtime.h>
+
+#import <sys/uio.h>
 
 #import "DuplicateTestNameFix.h"
+#import "dyld-interposing.h"
+#import "dyld_priv.h"
 #import "EventGenerator.h"
+#import "NSInvocationInSetFix.h"
 #import "ParseTestName.h"
 #import "ReporterEvents.h"
+#import "SenIsSuperclassOfClassPerformanceFix.h"
 #import "SenTestCaseInvokeTestFix.h"
 #import "SenTestClassEnumeratorFix.h"
 #import "Swizzle.h"
 #import "TestingFramework.h"
+#import "XCTest.h"
 
-#import "dyld-interposing.h"
-#import "dyld_priv.h"
+static NSString *const kEventQueueLabel = @"xctool.events";
 
 @interface XCToolAssertionHandler : NSAssertionHandler
 @end
@@ -59,17 +63,17 @@
 
 @end
 
-static int __stdoutHandle;
 static FILE *__stdout;
-static int __stderrHandle;
 static FILE *__stderr;
 
 static BOOL __testIsRunning = NO;
 static NSMutableArray *__testExceptions = nil;
-static NSMutableString *__testOutput = nil;
+static NSMutableData *__testOutput = nil;
 static int __testSuiteDepth = 0;
 
 static BOOL __testBundleHasStartedRunning = NO;
+
+static NSString *__testScope = nil;
 
 /**
  We don't want to turn this on until our initializer runs.  Otherwise, dylibs
@@ -98,7 +102,7 @@ static dispatch_queue_t EventQueue()
     // stdout and generating 'test-output' events.  We have a global variable
     // '__testIsRunning' that we can check to see if we're in the middle of a
     // running test, but there can be race conditions with multiple threads.
-    eventQueue = dispatch_queue_create("xctool.events", DISPATCH_QUEUE_SERIAL);
+    eventQueue = dispatch_queue_create([kEventQueueLabel UTF8String], DISPATCH_QUEUE_SERIAL);
   });
 
   return eventQueue;
@@ -111,12 +115,27 @@ static dispatch_queue_t EventQueue()
 // The regex here will identify all screen oriented ANSI escape codes, but will not identify Keyboard String codes.
 // Since Keyboard String codes make no sense in this context, the added complexity of having a regex try to identify
 // those codes as well was not necessary
-static NSString *StripAnsi(NSString *inputString)
+NSString *StripAnsi(NSString *inputString)
 {
-  NSRegularExpression *regex =
-    [NSRegularExpression regularExpressionWithPattern:@"\\e\\[(\\d;)??(\\d{1,2}[mHfABCDJhI])"
-                                              options:0
-                                                error:nil];
+  static dispatch_once_t onceToken;
+  static NSRegularExpression *regex;
+  dispatch_once(&onceToken, ^{
+    NSString *pattern =
+      @"\\\e\\[("          // Esc[
+      @"\\d+;\\d+[Hf]|"    // Esc[Line;ColumnH | Esc[Line;Columnf
+      @"\\d+[ABCD]|"       // Esc[ValueA | Esc[ValueB | Esc[ValueC | Esc[ValueD
+      @"([suKm]|2J)|"      // Esc[s | Esc[u | Esc[2J | Esc[K | Esc[m
+      @"\\=\\d+[hI]|"      // Esc[=Valueh | Esc[=ValueI
+      @"(\\d+;)*(\\d+)m)"; // Esc[Value;...;Valuem
+    regex = [[NSRegularExpression alloc] initWithPattern:pattern
+                                                 options:0
+                                                   error:nil];
+  });
+
+  if (inputString == nil) {
+    return @"";
+  }
+
   NSString *outputString = [regex stringByReplacingMatchesInString:inputString
                                                            options:0
                                                              range:NSMakeRange(0, [inputString length])
@@ -136,10 +155,15 @@ static void PrintJSON(id JSONObject)
             [[error localizedFailureReason] UTF8String]);
     exit(1);
   }
-  
+
   fwrite([data bytes], 1, [data length], __stdout);
   fputs("\n", __stdout);
   fflush(__stdout);
+}
+
+static BOOL IsOnEventQueue()
+{
+  return strcmp(dispatch_queue_get_label(DISPATCH_CURRENT_QUEUE_LABEL), [kEventQueueLabel UTF8String]) == 0;
 }
 
 #pragma mark - XCToolLog function declarations
@@ -247,11 +271,11 @@ static void XCToolLog_testCaseDidStart(NSString *fullTestName)
         kReporter_BeginTest_ClassNameKey : className,
         kReporter_BeginTest_MethodNameKey : methodName,
     }));
-    
+
     [__testExceptions release];
     __testExceptions = [[NSMutableArray alloc] init];
     __testIsRunning = YES;
-    __testOutput = [[NSMutableString string] retain];
+    __testOutput = [[NSMutableData dataWithCapacity:0] retain];
   });
 }
 
@@ -289,7 +313,23 @@ static void XCToolLog_testCaseDidStop(NSString *fullTestName, NSNumber *unexpect
       result = @"success";
       succeeded = YES;
     }
-    
+
+    NSString *testOutput = [[NSString alloc] initWithData:__testOutput encoding:NSUTF8StringEncoding];
+
+    // print all unprinted test output bytes in case `__testOutput` doesn't end with "\n"
+    if (![testOutput hasSuffix:@"\n"]) {
+      NSRange range = [testOutput rangeOfString:@"\n" options:NSBackwardsSearch];
+      if (range.length == 0) {
+        range.location = 0;
+      }
+      NSString *line = [testOutput substringFromIndex:NSMaxRange(range)];
+      PrintJSON(EventDictionaryWithNameAndContent(
+        kReporter_Events_TestOuput,
+        @{kReporter_TestOutput_OutputKey: StripAnsi(line)}
+      ));
+    }
+
+    // report test results
     NSArray *retExceptions = [__testExceptions copy];
     NSDictionary *json = EventDictionaryWithNameAndContent(
       kReporter_Events_EndTest, @{
@@ -299,13 +339,14 @@ static void XCToolLog_testCaseDidStop(NSString *fullTestName, NSNumber *unexpect
         kReporter_EndTest_SucceededKey: @(succeeded),
         kReporter_EndTest_ResultKey : result,
         kReporter_EndTest_TotalDurationKey : totalDuration,
-        kReporter_EndTest_OutputKey : StripAnsi(__testOutput),
+        kReporter_EndTest_OutputKey : StripAnsi(testOutput),
         kReporter_EndTest_ExceptionsKey : retExceptions,
     });
     [retExceptions release];
-    
+    [testOutput release];
+
     PrintJSON(json);
-    
+
     __testIsRunning = NO;
     [__testOutput release];
     __testOutput = nil;
@@ -345,13 +386,36 @@ static void XCToolLog_testCaseDidFail(NSDictionary *exceptionInfo)
 
 static void XCPerformTestWithSuppressedExpectedAssertionFailures(id self, SEL origSel, id arg1)
 {
+  int timeout = [@(getenv("OTEST_SHIM_TEST_TIMEOUT") ?: "0") intValue];
+
   NSAssertionHandler *handler = [[XCToolAssertionHandler alloc] init];
   NSThread *currentThread = [NSThread currentThread];
   NSMutableDictionary *currentThreadDict = [currentThread threadDictionary];
   [currentThreadDict setObject:handler forKey:NSAssertionHandlerKey];
 
-  // Call through original implementation
-  objc_msgSend(self, origSel, arg1);
+  if (timeout > 0) {
+    int64_t interval = timeout * NSEC_PER_SEC;
+    NSString *queueName = [NSString stringWithFormat:@"test.timer.%p", self];
+    dispatch_queue_t queue = dispatch_queue_create([queueName cStringUsingEncoding:NSASCIIStringEncoding], DISPATCH_QUEUE_SERIAL);
+    dispatch_set_target_queue(queue, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0));
+    dispatch_source_t source = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, queue);
+    dispatch_source_set_timer(source, dispatch_time(DISPATCH_TIME_NOW, interval), 0, 0);
+    dispatch_source_set_event_handler(source, ^{
+      [NSException raise:NSInternalInconsistencyException
+                  format:@"*** Test %@ ran longer than specified test time limit: %d second(s)", self, timeout];
+    });
+    dispatch_resume(source);
+
+    // Call through original implementation
+    objc_msgSend(self, origSel, arg1);
+
+    dispatch_source_cancel(source);
+    dispatch_release(source);
+    dispatch_release(queue);
+  } else {
+    // Call through original implementation
+    objc_msgSend(self, origSel, arg1);
+  }
 
   // The assertion handler hasn't been touched for our test, so we can safely remove it.
   [currentThreadDict removeObjectForKey:NSAssertionHandlerKey];
@@ -370,7 +434,90 @@ static void XCTestCase_performTest(id self, SEL sel, id arg1)
   XCPerformTestWithSuppressedExpectedAssertionFailures(self, originalSelector, arg1);
 }
 
+#pragma mark - _enableSymbolication
+static BOOL XCTestCase__enableSymbolication(id self, SEL sel)
+{
+  return NO;
+}
+
+#pragma mark - Test Scope
+
+static NSString * SenTestProbe_testScope(Class cls, SEL cmd)
+{
+  return __testScope;
+}
+
+static void UpdateTestScope()
+{
+  static NSString * const testListFileKey = @"OTEST_TESTLIST_FILE";
+  static NSString * const testingFrameworkFilterTestArgsKeyKey = @"OTEST_FILTER_TEST_ARGS_KEY";
+
+  NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+  NSString *testListFilePath = [defaults objectForKey:testListFileKey];
+  NSString *testingFrameworkFilterTestArgsKey = [defaults objectForKey:testingFrameworkFilterTestArgsKeyKey];
+  if (!testListFilePath && !testingFrameworkFilterTestArgsKey) {
+    return;
+  }
+  NSCAssert(testListFilePath, @"Path to file with list of tests should be specified");
+  NSCAssert(testingFrameworkFilterTestArgsKey, @"Testing framework filter test args key should be specified");
+
+  NSError *readError = nil;
+  NSString *testList = [NSString stringWithContentsOfFile:testListFilePath encoding:NSUTF8StringEncoding error:&readError];
+  NSCAssert(testList, @"Failed to read file at path %@ with error %@", testListFilePath, readError);
+  [defaults setValue:testList forKey:testingFrameworkFilterTestArgsKey];
+
+  __testScope = [testList retain];
+}
+
 #pragma mark -
+
+static void ProcessTestOutputWriteBytes(const void *buf, size_t nbyte)
+{
+  static NSData *newlineData = nil;
+  static dispatch_once_t onceToken;
+  dispatch_once(&onceToken, ^{
+    newlineData = [[NSData alloc] initWithBytes:"\n" length:1];
+  });
+
+  // search for the last "\n" w/o new buffer
+  NSRange previousNewlineRange = [__testOutput rangeOfData:newlineData
+                                                   options:NSDataSearchBackwards
+                                                     range:NSMakeRange(0, __testOutput.length)];
+  NSUInteger offset = previousNewlineRange.length != 0 ? NSMaxRange(previousNewlineRange) : 0;
+
+  // append new bytes
+  [__testOutput appendBytes:buf length:nbyte];
+
+  // check if "\n" is in the buf
+  NSRange newlineRange = [__testOutput rangeOfData:newlineData
+                                           options:NSDataSearchBackwards
+                                             range:NSMakeRange(offset, __testOutput.length - offset)];
+  if (newlineRange.length == 0) {
+    return;
+  }
+
+  NSData *lineData = [__testOutput subdataWithRange:NSMakeRange(offset, NSMaxRange(newlineRange) - offset)];
+  NSString *line = [[NSString alloc] initWithData:lineData encoding:NSUTF8StringEncoding];
+  dispatch_async(EventQueue(), ^{
+    PrintJSON(EventDictionaryWithNameAndContent(
+      kReporter_Events_TestOuput,
+      @{kReporter_TestOutput_OutputKey: StripAnsi(line)}
+    ));
+  });
+  [line release];
+}
+
+static void ProcessBeforeTestRunWriteBytes(const void *buf, size_t nbyte)
+{
+  NSString *output = [[NSString alloc] initWithBytes:buf length:nbyte encoding:NSUTF8StringEncoding];
+  dispatch_async(EventQueue(), ^{
+    PrintJSON(EventDictionaryWithNameAndContent(
+      kReporter_Events_OutputBeforeTestBundleStarts,
+      @{kReporter_OutputBeforeTestBundleStarts_OutputKey: StripAnsi(output)}
+    ));
+  });
+  [output release];
+}
 
 // From /usr/lib/system/libsystem_kernel.dylib - output from printf/fprintf/fwrite will flow to
 // __write_nonancel just before it does the system call.
@@ -378,26 +525,14 @@ ssize_t __write_nocancel(int fildes, const void *buf, size_t nbyte);
 static ssize_t ___write_nocancel(int fildes, const void *buf, size_t nbyte)
 {
   if (__enableWriteInterception && (fildes == STDOUT_FILENO || fildes == STDERR_FILENO)) {
-    dispatch_sync(EventQueue(), ^{
-      if (__testIsRunning && nbyte > 0) {
-        NSString *output = [[NSString alloc] initWithBytes:buf length:nbyte encoding:NSUTF8StringEncoding];
-        PrintJSON(EventDictionaryWithNameAndContent(
-          kReporter_Events_TestOuput,
-          @{kReporter_TestOutput_OutputKey: StripAnsi(output)}
-        ));
-        [__testOutput appendString:output];
-        [output release];
-      } else if (!__testBundleHasStartedRunning && nbyte > 0) {
-        NSString *output = [[NSString alloc] initWithBytes:buf length:nbyte encoding:NSUTF8StringEncoding];
-        PrintJSON(EventDictionaryWithNameAndContent(kReporter_Events_OutputBeforeTestBundleStarts,
-                                                    @{kReporter_OutputBeforeTestBundleStarts_OutputKey: StripAnsi(output)}
-                                                    ));
-        [output release];
-      }
-    });
+    if (__testIsRunning && nbyte > 0) {
+      ProcessTestOutputWriteBytes(buf, nbyte);
+    } else if (!__testBundleHasStartedRunning && nbyte > 0) {
+      ProcessBeforeTestRunWriteBytes(buf, nbyte);
+    }
     return nbyte;
   } else {
-    return write(fildes, buf, nbyte);
+    return __write_nocancel(fildes, buf, nbyte);
   }
 }
 DYLD_INTERPOSE(___write_nocancel, __write_nocancel);
@@ -406,23 +541,11 @@ static ssize_t __write(int fildes, const void *buf, size_t nbyte);
 static ssize_t __write(int fildes, const void *buf, size_t nbyte)
 {
   if (__enableWriteInterception && (fildes == STDOUT_FILENO || fildes == STDERR_FILENO)) {
-    dispatch_sync(EventQueue(), ^{
-      if (__testIsRunning && nbyte > 0) {
-        NSString *output = [[NSString alloc] initWithBytes:buf length:nbyte encoding:NSUTF8StringEncoding];
-        PrintJSON(EventDictionaryWithNameAndContent(
-          kReporter_Events_TestOuput,
-          @{kReporter_TestOutput_OutputKey: StripAnsi(output)}
-        ));
-        [__testOutput appendString:output];
-        [output release];
-      } else if (!__testBundleHasStartedRunning && nbyte > 0) {
-        NSString *output = [[NSString alloc] initWithBytes:buf length:nbyte encoding:NSUTF8StringEncoding];
-        PrintJSON(EventDictionaryWithNameAndContent(kReporter_Events_OutputBeforeTestBundleStarts,
-                                                    @{kReporter_OutputBeforeTestBundleStarts_OutputKey: StripAnsi(output)}
-                                                    ));
-        [output release];
-      }
-    });
+    if (__testIsRunning && nbyte > 0) {
+      ProcessTestOutputWriteBytes(buf, nbyte);
+    } else if (!__testBundleHasStartedRunning && nbyte > 0) {
+      ProcessBeforeTestRunWriteBytes(buf, nbyte);
+    }
     return nbyte;
   } else {
     return write(fildes, buf, nbyte);
@@ -430,13 +553,13 @@ static ssize_t __write(int fildes, const void *buf, size_t nbyte)
 }
 DYLD_INTERPOSE(__write, write);
 
-static NSString *CreateStringFromIOV(const struct iovec *iov, int iovcnt) {
+static NSData *CreateDataFromIOV(const struct iovec *iov, int iovcnt) {
   NSMutableData *buffer = [[NSMutableData alloc] initWithCapacity:0];
 
   for (int i = 0; i < iovcnt; i++) {
     [buffer appendBytes:iov[i].iov_base length:iov[i].iov_len];
   }
-  
+
   NSMutableData *bufferWithoutNulls = [[NSMutableData alloc] initWithLength:buffer.length];
 
   NSUInteger offset = 0;
@@ -452,12 +575,9 @@ static NSString *CreateStringFromIOV(const struct iovec *iov, int iovcnt) {
 
   [bufferWithoutNulls setLength:offset];
 
-  NSString *str = [[NSString alloc] initWithData:bufferWithoutNulls encoding:NSUTF8StringEncoding];
-
   [buffer release];
-  [bufferWithoutNulls release];
 
-  return str;
+  return bufferWithoutNulls;
 }
 
 // From /usr/lib/system/libsystem_kernel.dylib - output from writev$NOCANCEL$UNIX2003 will flow
@@ -466,23 +586,15 @@ ssize_t __writev_nocancel(int fildes, const struct iovec *iov, int iovcnt);
 static ssize_t ___writev_nocancel(int fildes, const struct iovec *iov, int iovcnt)
 {
   if (__enableWriteInterception && (fildes == STDOUT_FILENO || fildes == STDERR_FILENO)) {
-    dispatch_sync(EventQueue(), ^{
-      if (__testIsRunning && iovcnt > 0) {
-        NSString *buffer = CreateStringFromIOV(iov, iovcnt);
-        PrintJSON(EventDictionaryWithNameAndContent(
-          kReporter_Events_TestOuput,
-          @{kReporter_TestOutput_OutputKey: StripAnsi(buffer)}
-        ));
-        [__testOutput appendString:buffer];
-        [buffer release];
-      } else if (!__testBundleHasStartedRunning && iovcnt > 0) {
-        NSString *buffer = CreateStringFromIOV(iov, iovcnt);
-        PrintJSON(EventDictionaryWithNameAndContent(kReporter_Events_OutputBeforeTestBundleStarts,
-                                                    @{kReporter_OutputBeforeTestBundleStarts_OutputKey: StripAnsi(buffer)}
-                                                    ));
-        [buffer release];
-      }
-    });
+    if (__testIsRunning && iovcnt > 0) {
+      NSData *data = CreateDataFromIOV(iov, iovcnt);
+      ProcessTestOutputWriteBytes(data.bytes, data.length);
+      [data release];
+    } else if (!__testBundleHasStartedRunning && iovcnt > 0) {
+      NSData *data = CreateDataFromIOV(iov, iovcnt);
+      ProcessBeforeTestRunWriteBytes(data.bytes, data.length);
+      [data release];
+    }
     return iovcnt;
   } else {
     return __writev_nocancel(fildes, iov, iovcnt);
@@ -494,30 +606,44 @@ DYLD_INTERPOSE(___writev_nocancel, __writev_nocancel);
 static ssize_t __writev(int fildes, const struct iovec *iov, int iovcnt)
 {
   if (__enableWriteInterception && (fildes == STDOUT_FILENO || fildes == STDERR_FILENO)) {
-    dispatch_sync(EventQueue(), ^{
-      if (__testIsRunning && iovcnt > 0) {
-        NSString *buffer = CreateStringFromIOV(iov, iovcnt);
-        PrintJSON(EventDictionaryWithNameAndContent(
-          kReporter_Events_TestOuput,
-          @{kReporter_TestOutput_OutputKey: StripAnsi(buffer)}
-        ));
-        [__testOutput appendString:buffer];
-        [buffer release];
-      } else if (!__testBundleHasStartedRunning && iovcnt > 0) {
-        NSString *buffer = CreateStringFromIOV(iov, iovcnt);
-        PrintJSON(EventDictionaryWithNameAndContent(kReporter_Events_OutputBeforeTestBundleStarts,
-                                                    @{kReporter_OutputBeforeTestBundleStarts_OutputKey: StripAnsi(buffer)}
-                                                    ));
-        [buffer release];
-      }
-    });
-
+    if (__testIsRunning && iovcnt > 0) {
+      NSData *data = CreateDataFromIOV(iov, iovcnt);
+      ProcessTestOutputWriteBytes(data.bytes, data.length);
+      [data release];
+    } else if (!__testBundleHasStartedRunning && iovcnt > 0) {
+      NSData *data = CreateDataFromIOV(iov, iovcnt);
+      ProcessBeforeTestRunWriteBytes(data.bytes, data.length);
+      [data release];
+    }
     return iovcnt;
   } else {
     return writev(fildes, iov, iovcnt);
   }
 }
 DYLD_INTERPOSE(__writev, writev);
+
+
+static void __exit(int code);
+static void __exit(int code)
+{
+  if (!IsOnEventQueue()) {
+    // send all events on EventQueue() before exiting.
+    dispatch_sync(EventQueue(), ^{});
+  }
+  exit(code);
+}
+DYLD_INTERPOSE(__exit, exit);
+
+static void __abort(void);
+static void __abort(void)
+{
+  if (!IsOnEventQueue()) {
+    // send all events on EventQueue() before aborting.
+    dispatch_sync(EventQueue(), ^{});
+  }
+  abort();
+}
+DYLD_INTERPOSE(__abort, abort);
 
 static const char *DyldImageStateChangeHandler(enum dyld_image_states state,
                                                uint32_t infoCount,
@@ -548,11 +674,18 @@ static const char *DyldImageStateChangeHandler(enum dyld_image_states state,
       XTSwizzleSelectorForFunction(NSClassFromString(@"SenTestCase"),
                                    @selector(performTest:),
                                    (IMP)SenTestCase_performTest);
+      if (__testScope) {
+        XTSwizzleClassSelectorForFunction(NSClassFromString(@"SenTestProbe"),
+                                          @selector(testScope),
+                                          (IMP)SenTestProbe_testScope);
+      }
 
       NSDictionary *frameworkInfo = FrameworkInfoForExtension(@"octest");
-      ApplyDuplicateTestNameFix([frameworkInfo objectForKey:kTestingFrameworkTestProbeClassName]);
+      ApplyDuplicateTestNameFix([frameworkInfo objectForKey:kTestingFrameworkTestProbeClassName],
+                                [frameworkInfo objectForKey:kTestingFrameworkTestSuiteClassName]);
       XTApplySenTestClassEnumeratorFix();
       XTApplySenTestCaseInvokeTestFix();
+      XTApplySenIsSuperclassOfClassPerformanceFix();
     }
     else if (strstr(info[i].imageFilePath, "XCTest.framework") != NULL) {
       // Since the 'XCTestLog' class now exists, we can swizzle it!
@@ -574,8 +707,15 @@ static const char *DyldImageStateChangeHandler(enum dyld_image_states state,
       XTSwizzleSelectorForFunction(NSClassFromString(@"XCTestCase"),
                                    @selector(performTest:),
                                    (IMP)XCTestCase_performTest);
+      if ([NSClassFromString(@"XCTestCase") respondsToSelector:@selector(_enableSymbolication)]) {
+        // Disable symbolication thing on xctest 7 because it sometimes takes forever.
+        XTSwizzleClassSelectorForFunction(NSClassFromString(@"XCTestCase"),
+                                          @selector(_enableSymbolication),
+                                          (IMP)XCTestCase__enableSymbolication);
+      }
       NSDictionary *frameworkInfo = FrameworkInfoForExtension(@"xctest");
-      ApplyDuplicateTestNameFix([frameworkInfo objectForKey:kTestingFrameworkTestProbeClassName]);
+      ApplyDuplicateTestNameFix([frameworkInfo objectForKey:kTestingFrameworkTestProbeClassName],
+                                [frameworkInfo objectForKey:kTestingFrameworkTestSuiteClassName]);
     }
   }
 
@@ -584,10 +724,23 @@ static const char *DyldImageStateChangeHandler(enum dyld_image_states state,
 
 __attribute__((constructor)) static void EntryPoint()
 {
-  __stdoutHandle = dup(STDOUT_FILENO);
-  __stdout = fdopen(__stdoutHandle, "w");
-  __stderrHandle = dup(STDERR_FILENO);
-  __stderr = fdopen(__stderrHandle, "w");
+  const char *stdoutFileKey = "OTEST_SHIM_STDOUT_FILE";
+  if (getenv(stdoutFileKey)) {
+    __stdout = fopen(getenv(stdoutFileKey), "w");
+  } else {
+    int stdoutHandle = dup(STDOUT_FILENO);
+    __stdout = fdopen(stdoutHandle, "w");
+  }
+
+  const char *stderrFileKey = "OTEST_SHIM_STDERR_FILE";
+  if (getenv(stderrFileKey)) {
+    __stderr = fopen(getenv(stderrFileKey), "w");
+  } else {
+    int stderrHandle = dup(STDERR_FILENO);
+    __stderr = fdopen(stderrHandle, "w");
+  }
+
+  UpdateTestScope();
 
   // We need to swizzle SenTestLog (part of SenTestingKit), but the test bundle
   // which links SenTestingKit hasn't been loaded yet.  Let's register to get
@@ -602,3 +755,8 @@ __attribute__((constructor)) static void EntryPoint()
   __enableWriteInterception = YES;
 }
 
+__attribute__((destructor)) static void ExitPoint()
+{
+  // send all events on EventQueue() before quiting.
+  dispatch_sync(EventQueue(), ^{});
+}

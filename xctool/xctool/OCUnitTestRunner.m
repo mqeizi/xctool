@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,26 +14,60 @@
 // limitations under the License.
 //
 
-#import "OCUnitTestRunner.h"
-#import "OCUnitTestRunnerInternal.h"
-
 #import <QuartzCore/QuartzCore.h>
 
+#import "OCUnitTestRunner.h"
+#import "OCUnitTestRunnerInternal.h"
 #import "ReportStatus.h"
 #import "TestRunState.h"
 #import "XcodeBuildSettings.h"
+#import "XCTestConfiguration.h"
 #import "XCToolUtil.h"
 
+@interface OCUnitTestRunner ()
+@property (nonatomic, copy) NSDictionary *buildSettings;
+@property (nonatomic, copy) SimulatorInfo *simulatorInfo;
+@property (nonatomic, copy) NSArray *focusedTestCases;
+@property (nonatomic, copy) NSArray *allTestCases;
+@property (nonatomic, copy) NSArray *arguments;
+@property (nonatomic, copy) NSDictionary *environment;
+@property (nonatomic, assign) BOOL garbageCollection;
+@property (nonatomic, assign) BOOL freshSimulator;
+@property (nonatomic, assign) BOOL resetSimulator;
+@property (nonatomic, assign) BOOL noResetSimulatorOnFailure;
+@property (nonatomic, assign) BOOL freshInstall;
+@property (nonatomic, copy, readwrite) NSArray *reporters;
+@property (nonatomic, copy) NSDictionary *framework;
+@end
+
 @implementation OCUnitTestRunner
+
+/**
+ * Helper to check if the string is a prefix wildcard string,
+ * which is a string ending with a star character "*".
+ * If this is the case, a string with the star character is returned, otherwise 'nil'
+ *
+ * @param specifier The string to check
+ */
++ (NSString *)wildcardPrefixFrom:(NSString *)specifier {
+  NSString *resultPrefix = nil;
+  if ([specifier length] > 0 &&
+      [specifier characterAtIndex:specifier.length-1] == '*') {
+    resultPrefix = [specifier substringToIndex:specifier.length-1];
+  }
+  return resultPrefix;
+}
 
 + (NSArray *)filterTestCases:(NSArray *)testCases
              withSenTestList:(NSString *)senTestList
           senTestInvertScope:(BOOL)senTestInvertScope
+                       error:(NSString **)error
 {
   NSSet *originalSet = [NSSet setWithArray:testCases];
 
   // Come up with a set of test cases that match the senTestList pattern.
   NSMutableSet *matchingSet = [NSMutableSet set];
+  NSMutableArray *notMatchedSpecifiers = [NSMutableArray array];
 
   if ([senTestList isEqualToString:@"All"]) {
     [matchingSet addObjectsFromArray:testCases];
@@ -41,22 +75,43 @@
     // None, we don't add anything to the set.
   } else {
     for (NSString *specifier in [senTestList componentsSeparatedByString:@","]) {
-      // If we have a slash, assume it's int he form of "SomeClass/testMethod"
-      BOOL hasClassAndMethod = [specifier rangeOfString:@"/"].length > 0;
+      BOOL matched = NO;
 
-      if (hasClassAndMethod) {
+      // If we have a slash, assume it's in the form of "SomeClass/testMethod"
+      BOOL hasClassAndMethod = [specifier rangeOfString:@"/"].length > 0;
+      NSString *matchingPrefix = [self wildcardPrefixFrom:specifier];
+
+      if (hasClassAndMethod && !matchingPrefix) {
+        // "SomeClass/testMethod"
+        // Use the set for a fast strict matching for this one test
         if ([originalSet containsObject:specifier]) {
           [matchingSet addObject:specifier];
+          matched = YES;
         }
       } else {
-        NSString *matchingPrefix = [specifier stringByAppendingString:@"/"];
+        // "SomeClass", or "SomeClassPrefix*", or "SomeClass/testPrefix*"
+        if (!matchingPrefix) {
+          // Regular case - strict matching, append "/" to limit results to all tests for this one class
+          matchingPrefix = [specifier stringByAppendingString:@"/"];
+        }
+
         for (NSString *testCase in testCases) {
           if ([testCase hasPrefix:matchingPrefix]) {
             [matchingSet addObject:testCase];
+            matched = YES;
           }
         }
       }
+
+      if (!matched) {
+        [notMatchedSpecifiers addObject:specifier];
+      }
     }
+  }
+
+  if ([notMatchedSpecifiers count] && senTestInvertScope == NO) {
+    *error = [NSString stringWithFormat:@"Test cases for the following test specifiers weren't found: %@.", [notMatchedSpecifiers componentsJoinedByString:@", "]];
+    return nil;
   }
 
   NSMutableArray *result = [NSMutableArray array];
@@ -64,7 +119,7 @@
   if (!senTestInvertScope) {
     [result addObjectsFromArray:[matchingSet allObjects]];
   } else {
-    NSMutableSet *invertedSet = [[originalSet mutableCopy] autorelease];
+    NSMutableSet *invertedSet = [originalSet mutableCopy];
     [invertedSet minusSet:matchingSet];
     [result addObjectsFromArray:[invertedSet allObjects]];
   }
@@ -73,95 +128,112 @@
   return result;
 }
 
-- (id)initWithBuildSettings:(NSDictionary *)buildSettings
-           focusedTestCases:(NSArray *)focusedTestCases
-               allTestCases:(NSArray *)allTestCases
-                  arguments:(NSArray *)arguments
-                environment:(NSDictionary *)environment
-             freshSimulator:(BOOL)freshSimulator
-               freshInstall:(BOOL)freshInstall
-              simulatorType:(NSString *)simulatorType
-                  reporters:(NSArray *)reporters
+- (instancetype)initWithBuildSettings:(NSDictionary *)buildSettings
+                        simulatorInfo:(SimulatorInfo *)simulatorInfo
+                     focusedTestCases:(NSArray *)focusedTestCases
+                         allTestCases:(NSArray *)allTestCases
+                            arguments:(NSArray *)arguments
+                          environment:(NSDictionary *)environment
+                       freshSimulator:(BOOL)freshSimulator
+                       resetSimulator:(BOOL)resetSimulator
+            noResetSimulatorOnFailure:(BOOL)noResetSimulatorOnFailure
+                         freshInstall:(BOOL)freshInstall
+                          testTimeout:(NSInteger)testTimeout
+                            reporters:(NSArray *)reporters
 {
   if (self = [super init]) {
-    _buildSettings = [buildSettings retain];
-    _focusedTestCases = [focusedTestCases retain];
-    _allTestCases = [allTestCases retain];
-    _arguments = [arguments retain];
-    _environment = [environment retain];
+    _buildSettings = [buildSettings copy];
+    _simulatorInfo = [simulatorInfo copy];
+    _simulatorInfo.buildSettings = buildSettings;
+    _focusedTestCases = [focusedTestCases copy];
+    _allTestCases = [allTestCases copy];
+    _arguments = [arguments copy];
+    _environment = [environment copy];
     _freshSimulator = freshSimulator;
+    _resetSimulator = resetSimulator;
+    _noResetSimulatorOnFailure = noResetSimulatorOnFailure;
     _freshInstall = freshInstall;
-    _simulatorType = [simulatorType retain];
-    _reporters = [reporters retain];
-    _framework = [FrameworkInfoForTestBundleAtPath([self testBundlePath]) retain];
-    _cpuType = CPU_TYPE_ANY;
+    _testTimeout = testTimeout;
+    _reporters = [reporters copy];
+    _framework = FrameworkInfoForTestBundleAtPath([_simulatorInfo productBundlePath]);
   }
   return self;
 }
 
-- (void)dealloc
-{
-  [_buildSettings release];
-  [_focusedTestCases release];
-  [_allTestCases release];
-  [_arguments release];
-  [_environment release];
-  [_simulatorType release];
-  [_reporters release];
-  [_framework release];
-  [super dealloc];
-}
 
 - (void)runTestsAndFeedOutputTo:(void (^)(NSString *))outputLineBlock
                    startupError:(NSString **)startupError
+                    otherErrors:(NSString **)otherErrors
 {
   // Subclasses will override this method.
 }
 
 - (BOOL)runTests
 {
-  TestRunState *testRunState = [[[TestRunState alloc] initWithTests:_focusedTestCases reporters:_reporters] autorelease];
+  BOOL allTestsPassed = YES;
+  OCTestSuiteEventState *testSuiteState = nil;
 
-  void (^feedOutputToBlock)(NSString *) = ^(NSString *line) {
-    NSData *lineData = [line dataUsingEncoding:NSUTF8StringEncoding];
+  while (!testSuiteState || [[testSuiteState unstartedTests] count]) {
+    TestRunState *testRunState;
+    if (!testSuiteState) {
+      testRunState = [[TestRunState alloc] initWithTests:_focusedTestCases reporters:_reporters];
+      testSuiteState = testRunState.testSuiteState;
+    } else {
+      testRunState = [[TestRunState alloc] initWithTestSuiteEventState:testSuiteState];
+    }
 
-    [testRunState parseAndHandleEvent:line];
-    [_reporters makeObjectsPerformSelector:@selector(publishDataForEvent:) withObject:lineData];
-  };
+    void (^feedOutputToBlock)(NSString *) = ^(NSString *line) {
+      [testRunState parseAndHandleEvent:line];
+    };
 
-  NSString *runTestsError = nil;
+    NSString *runTestsError = nil;
+    NSString *otherErrors = nil;
 
-  [testRunState prepareToRun];
+    [testRunState prepareToRun];
 
-  [self runTestsAndFeedOutputTo:feedOutputToBlock
-                   startupError:&runTestsError];
+    [self runTestsAndFeedOutputTo:feedOutputToBlock
+                     startupError:&runTestsError
+                      otherErrors:&otherErrors];
 
-  [testRunState didFinishRunWithStartupError:runTestsError];
+    [testRunState didFinishRunWithStartupError:runTestsError otherErrors:otherErrors];
 
-  return [testRunState allTestsPassed];
+    allTestsPassed &= [testRunState allTestsPassed];
+
+    // update focused test cases
+    OCTestSuiteEventState *suiteState = [testRunState testSuiteState];
+    NSArray *unstartedTests = [suiteState unstartedTests];
+    NSMutableArray *unstartedTestCases = [[NSMutableArray alloc] initWithCapacity:[unstartedTests count]];
+    [unstartedTests enumerateObjectsUsingBlock:^(OCTestEventState *obj, NSUInteger idx, BOOL *stop) {
+      [unstartedTestCases addObject:[NSString stringWithFormat:@"%@/%@", obj.className, obj.methodName]];
+    }];
+
+    _focusedTestCases = unstartedTestCases;
+  }
+
+
+  return allTestsPassed;
 }
 
-- (NSArray *)testArguments
+- (NSMutableArray *)commonTestArguments
+{
+  // Add any argments that might have been specifed in the scheme.
+  NSMutableArray *args = [_arguments ?: @[] mutableCopy];
+  [args addObjectsFromArray:@[
+    // Not sure exactly what this does...
+    @"-NSTreatUnknownArgumentsAsOpen", @"NO",
+    // Not sure exactly what this does...
+    @"-ApplePersistenceIgnoreState", @"YES",
+  ]];
+  return args;
+}
+
+- (NSArray *)testCasesToSkip
 {
   NSSet *focusedSet = [NSSet setWithArray:_focusedTestCases];
   NSSet *allSet = [NSSet setWithArray:_allTestCases];
 
-  NSString *testSpecifier = nil;
-  BOOL invertScope = NO;
-
-  if ([focusedSet isEqualToSet:allSet]) {
-
-    if (TestableSettingsIndicatesApplicationTest(_buildSettings)) {
-      // Xcode.app will always pass 'All' when running all tests in an
-      // application test bundle.
-      testSpecifier = @"All";
-    } else {
-      // Xcode.app will always pass 'Self' when running all tests in an
-      // logic test bundle.
-      testSpecifier = @"Self";
-    }
-
-    invertScope = NO;
+  if ((TestableSettingsIndicatesApplicationTest(_buildSettings)) && [focusedSet isEqualToSet:allSet]) {
+    return nil;
   } else {
     // When running a specific subset of tests, Xcode.app will always pass the
     // the list of excluded tests and enable the InvertScope option.
@@ -180,53 +252,138 @@
     NSMutableSet *invertedSet = [NSMutableSet setWithSet:allSet];
     [invertedSet minusSet:focusedSet];
 
-    NSArray *invertedTestCases = [[invertedSet allObjects] sortedArrayUsingSelector:@selector(compare:)];
-    testSpecifier = [invertedTestCases componentsJoinedByString:@","];
-
-    invertScope = YES;
+    return [[invertedSet allObjects] sortedArrayUsingSelector:@selector(compare:)];
   }
+}
 
-  // These are the same arguments Xcode would use when invoking otest.  To capture these, we
-  // just ran a test case from Xcode that dumped 'argv'.  It's a little tricky to do that outside
-  // of the 'main' function, but you can use _NSGetArgc and _NSGetArgv.  See --
-  // http://unixjunkie.blogspot.com/2006/07/access-argc-and-argv-from-anywhere.html
-  NSMutableArray *args = [NSMutableArray arrayWithArray:@[
-           // Not sure exactly what this does...
-           @"-NSTreatUnknownArgumentsAsOpen", @"NO",
-           // Not sure exactly what this does...
-           @"-ApplePersistenceIgnoreState", @"YES",
-           // SenTest / XCTest is one of Self, All, None,
-           // or TestClassName[/testCaseName][,TestClassName2]
-           [@"-" stringByAppendingString:_framework[kTestingFrameworkFilterTestArgsKey]], testSpecifier,
-           // SenTestInvertScope / XCTestInvertScope optionally inverts whatever
-           // SenTest would normally select. We never invert, since we always
-           // pass the exact list of test cases to be run.
-           [@"-" stringByAppendingString:_framework[kTestingFrameworkInvertScopeKey]], invertScope ? @"YES" : @"NO",
-           ]];
+- (NSArray *)testArgumentsWithSpecifiedTestsToRun
+{
+  NSArray *testCasesToSkip = [self testCasesToSkip];
+  BOOL invertScope = testCasesToSkip ? YES : NO;
+  NSMutableArray *args = [self commonTestArguments];
 
-  // Add any argments that might have been specifed in the scheme.
-  [args addObjectsFromArray:_arguments];
+  // Optionally inverts whatever SenTest / XCTest would normally select.
+  [args addObjectsFromArray:@[
+    [@"-" stringByAppendingString:_framework[kTestingFrameworkInvertScopeKey]],
+    invertScope ? @"YES" : @"NO",
+  ]];
+
+  if ([testCasesToSkip count] == 0) {
+    // SenTest / XCTest is one of Self, All, None,
+    // or TestClassName[/testCaseName][,TestClassName2]
+    [args addObject:[@"-" stringByAppendingString:_framework[kTestingFrameworkFilterTestArgsKey]]];
+    // Xcode.app will always pass 'All' when running all tests in an
+    // application test bundle.
+    [args addObject:testCasesToSkip ? @"" : @"All"];
+  } else {
+    NSString *testScope = [testCasesToSkip componentsJoinedByString:@","];
+    NSString *testListFilePath = MakeTempFileWithPrefix([NSString stringWithFormat:@"otest_test_list_%@", HashForString(testScope)]);
+    NSError *writeError = nil;
+    BOOL writeResult;
+    /*
+     * Since number of test cases to skip or run is unlimited we need to pass them through a file
+     * because length of a command line string is limited.
+     *
+     * In XCTest framework there is a built-in feature that allows us to do that:
+     *   test configuration could be saved into a file in plist format path to which should be
+     *   passed in arguments with `-XCTestScopeFile` option.
+     *
+     * In SenTesting framework there is no such built-in feature. Since we are injecting otest-shim
+     *   library we could swizzle `+[SenTestProbe testScope]` method and return list of test cases
+     *   to skip or run there. In that case we could read list of test cases from a file and that is
+     *   what we are doing below using `-OTEST_TESTLIST_FILE` option.
+     */
+    if ([_framework[kTestingFrameworkFilterTestArgsKey] isEqual:@"XCTest"]) {
+      testListFilePath = [testListFilePath stringByAppendingPathExtension:@"plist"];
+      NSData *data = [NSPropertyListSerialization dataWithPropertyList:@{@"XCTestScope": @[testScope],
+                                                                         @"XCTestInvertScope": @(invertScope),}
+                                                                format:NSPropertyListXMLFormat_v1_0
+                                                               options:0
+                                                                 error:&writeError];
+      NSAssert(data, @"Couldn't convert to property list format: %@, error: %@", testScope, writeError);
+      writeResult = [data writeToFile:testListFilePath atomically:YES];
+      NSAssert(writeResult, @"Couldn't save list of tests to run to a file at path %@", testListFilePath);
+      [args addObjectsFromArray:@[
+        @"-XCTestScopeFile", testListFilePath,
+      ]];
+    } else {
+      writeResult = [testScope writeToFile:testListFilePath atomically:YES encoding:NSUTF8StringEncoding error:&writeError];
+      NSAssert(writeResult, @"Couldn't save list of tests to run to a file at path %@; error: %@", testListFilePath, writeError);
+      [args addObjectsFromArray:@[
+        // in otest-shim we are swizzling `+[SenTestProbe testScope]` and
+        // returning list of tests saved in the file specified below
+        @"-OTEST_TESTLIST_FILE", testListFilePath,
+        @"-OTEST_FILTER_TEST_ARGS_KEY", _framework[kTestingFrameworkFilterTestArgsKey],
+        // it looks like `simctl` polute `NSUserDefaults` of SenTesting framework during
+        // test querying and set `SenTest` value to `None`. That tells SenTesting
+        // framework to skip test running and as a result swizzled in `otest-shim` method
+        // isn't called. To force the framework to call it we are passing fake value
+        // of `SenTest` and then returning real list of tests to run from that method.
+        [@"-" stringByAppendingString:_framework[kTestingFrameworkFilterTestArgsKey]],
+        @"XCTOOL_FAKE_LIST_OF_TESTS",
+      ]];
+    }
+  }
 
   return args;
 }
 
-- (NSDictionary *)otestEnvironmentWithOverrides:(NSDictionary *)overrides
+- (NSDictionary *)testEnvironmentWithSpecifiedTestConfiguration
+{
+  NSArray *testCasesToSkip = [self testCasesToSkip];
+
+  Class XCTestConfigurationClass = NSClassFromString(@"XCTestConfiguration");
+  NSAssert(XCTestConfigurationClass, @"XCTestConfiguration isn't available");
+
+  XCTestConfiguration *configuration = [[XCTestConfigurationClass alloc] init];
+  [configuration setProductModuleName:_buildSettings[Xcode_PRODUCT_MODULE_NAME]];
+  [configuration setTestBundleURL:[NSURL fileURLWithPath:[_simulatorInfo productBundlePath]]];
+  [configuration setTestsToSkip:[NSSet setWithArray:testCasesToSkip]];
+  if ([testCasesToSkip count] == 0) {
+    [configuration setTestsToSkip:nil];
+    [configuration setTestsToRun:[NSSet setWithArray:_allTestCases]];
+  }
+  [configuration setReportResultsToIDE:NO];
+
+  NSString *XCTestConfigurationFilename = [NSString stringWithFormat:@"%@-%@", _buildSettings[Xcode_PRODUCT_NAME], [configuration.sessionIdentifier UUIDString]];
+  NSString *XCTestConfigurationFilePath = [MakeTempFileWithPrefix(XCTestConfigurationFilename) stringByAppendingPathExtension:@"xctestconfiguration"];
+  if ([[NSFileManager defaultManager] fileExistsAtPath:XCTestConfigurationFilePath]) {
+    [[NSFileManager defaultManager] removeItemAtPath:XCTestConfigurationFilePath error:nil];
+  }
+  if (![NSKeyedArchiver archiveRootObject:configuration toFile:XCTestConfigurationFilePath]) {
+    NSAssert(NO, @"Couldn't archive XCTestConfiguration to file at path %@", XCTestConfigurationFilePath);
+  }
+
+  return @{
+    @"XCTestConfigurationFilePath": XCTestConfigurationFilePath,
+  };
+}
+
+- (NSMutableDictionary *)otestEnvironmentWithOverrides:(NSDictionary *)overrides
 {
   NSMutableDictionary *env = [NSMutableDictionary dictionary];
 
+  NSMutableDictionary *internalEnvironment = [NSMutableDictionary dictionary];
+  if (_testTimeout > 0) {
+    internalEnvironment[@"OTEST_SHIM_TEST_TIMEOUT"] = [@(_testTimeout) stringValue];
+  }
+
   NSArray *layers = @[
-                      // Xcode will let your regular environment pass-thru to
-                      // the test.
-                      [[NSProcessInfo processInfo] environment],
-                      // Any special environment vars set in the scheme.
-                      _environment,
-                      // Whatever values we need to make the test run at all for
-                      // ios/mac or logic/application tests.
-                      overrides,
-                      ];
+    // Xcode will let your regular environment pass-thru to
+    // the test.
+    [[_simulatorInfo simulatedSdkName] hasPrefix:@"macosx"] ? [[NSProcessInfo processInfo] environment] : @{},
+    // Any special environment vars set in the scheme.
+    _environment ?: @{},
+    // Internal environment that should be passed to xctool libs
+    internalEnvironment,
+    // Whatever values we need to make the test run at all for
+    // ios/mac or logic/application tests.
+    overrides,
+  ];
   for (NSDictionary *layer in layers) {
     [layer enumerateKeysAndObjectsUsingBlock:^(id key, id val, BOOL *stop){
-      if ([key isEqualToString:@"DYLD_INSERT_LIBRARIES"]) {
+      if ([key isEqualToString:@"DYLD_INSERT_LIBRARIES"] ||
+          [key isEqualToString:@"DYLD_FALLBACK_FRAMEWORK_PATH"]) {
         // It's possible that the scheme (or regular host environment) has its
         // own value for DYLD_INSERT_LIBRARIES.  In that case, we don't want to
         // stomp on it when insert otest-shim.
@@ -243,14 +400,6 @@
   }
 
   return env;
-}
-
-- (NSString *)testBundlePath
-{
-  return [NSString stringWithFormat:@"%@/%@",
-          _buildSettings[Xcode_BUILT_PRODUCTS_DIR],
-          _buildSettings[Xcode_FULL_PRODUCT_NAME]
-          ];
 }
 
 @end

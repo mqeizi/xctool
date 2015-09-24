@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -68,14 +68,14 @@ static void XTSwizzleSelectorForFunction(Class cls, SEL sel, IMP newImp)
 // location of the error, severity, and the list of fix-it tips Xcode would normally show.
 @property (readonly) NSArray *messages;
 
-@property(readonly) double timeStoppedRecording;
-@property(readonly) double timeStartedRecording;
+@property (readonly) double timeStoppedRecording;
+@property (readonly) double timeStartedRecording;
 
 // The number of times "warning:" appears in the output.
-@property(readonly) NSUInteger totalNumberOfWarnings;
+@property (readonly) NSUInteger totalNumberOfWarnings;
 
 // The number of times "error:" appears in the output.
-@property(readonly) NSUInteger totalNumberOfErrors;
+@property (readonly) NSUInteger totalNumberOfErrors;
 
 @end
 
@@ -89,42 +89,41 @@ static void GetProjectTargetConfigurationFromHeader(NSString *header,
 {
   // Pull out the pieces from the header that looks like --
   // === BUILD NATIVE TARGET TestTest OF PROJECT TestTest WITH THE DEFAULT CONFIGURATION (Release) ===
+  void (^errorBlock)(void) = ^{
+    fprintf(__stderr,
+            "ERROR: Error parsing project, target, configuration from header '%s'.\n",
+            [header UTF8String]);
+    exit(1);
+  };
 
   NSScanner *scanner = [NSScanner scannerWithString:header];
   [scanner setCharactersToBeSkipped:nil];
 
   if (![scanner scanUpToString:@"TARGET " intoString:nil]) {
-    goto Error;
+    errorBlock();
   }
 
   [scanner scanString:@"TARGET " intoString:nil];
 
   if (![scanner scanUpToString:@" OF PROJECT " intoString:target]) {
-    goto Error;
+    errorBlock();
   }
 
   [scanner scanString:@" OF PROJECT " intoString:nil];
 
   if (![scanner scanUpToString:@" WITH " intoString:project]) {
-    goto Error;
+    errorBlock();
   }
 
   if (![scanner scanUpToString:@" CONFIGURATION " intoString:nil]) {
-    goto Error;
+    errorBlock();
   }
 
   [scanner scanString:@" CONFIGURATION " intoString:nil];
 
   if (![scanner scanUpToString:@" ===" intoString:configuration]) {
-    goto Error;
+    errorBlock();
   }
-
-  return;
-Error:
-  fprintf(__stderr,
-          "ERROR: Error parsing project, target, configuration from header '%s'.\n",
-          [header UTF8String]);
-  exit(1);
 }
 
 static void PrintJSON(id JSONObject)
@@ -153,7 +152,7 @@ static void AnnounceBeginSection(IDEActivityLogSection *section)
     PrintJSON(EventDictionaryWithNameAndContent(
       kReporter_Events_BeginBuildCommand, @{
         kReporter_BeginBuildCommand_TitleKey : section.title,
-        kReporter_BeginBuildCommand_CommandKey : section.commandDetailDescription,
+        kReporter_BeginBuildCommand_CommandKey : section.commandDetailDescription ?: @"",
       }));
   } else if ([sectionTypeString hasPrefix:kDomainTypeProductItemPrefix]) {
     NSString *project = nil;
@@ -200,6 +199,9 @@ static void AnnounceEndSection(IDEActivityLogSection *section)
         kReporter_EndBuildTarget_ProjectKey : project,
         kReporter_EndBuildTarget_TargetKey : target,
         kReporter_EndBuildTarget_ConfigurationKey : configuration,
+        kReporter_EndBuildCommand_DurationKey : @(section.timeStoppedRecording - section.timeStartedRecording),
+        kReporter_EndBuildCommand_TotalNumberOfWarnings : @(section.totalNumberOfWarnings),
+        kReporter_EndBuildCommand_TotalNumberOfErrors : @(section.totalNumberOfErrors),
       }));
   }
 }
@@ -224,22 +226,6 @@ static void HandleEndSection(IDEActivityLogSection *section)
   if ([__begunLogSections containsObject:section]) {
     AnnounceEndSection(section);
   }
-}
-
-static void Xcode3CommandLineBuildLogRecorder__emitSection(id self, SEL cmd, IDEActivityLogSection *section)
-{
-  // Call through to the original implementation.
-  objc_msgSend(self, sel_getUid("__Xcode3CommandLineBuildLogRecorder__emitSection:"), section);
-
-  HandleBeginSection(section);
-}
-
-static void Xcode3CommandLineBuildLogRecorder__finishEmittingClosedSection(id self, SEL sel, IDEActivityLogSection *section)
-{
-  // Call through to the original implementation.
-  objc_msgSend(self, sel_getUid("__Xcode3CommandLineBuildLogRecorder__finishEmittingClosedSection:"), section);
-
-  HandleEndSection(section);
 }
 
 static void IDECommandLineBuildLogRecorder__emitSection_inSupersection(id self,
@@ -297,11 +283,9 @@ __attribute__((constructor)) static void EntryPoint()
   __begunLogSections = [[NSMutableSet alloc] initWithCapacity:0];
   __endedLogSections = [[NSMutableSet alloc] initWithCapacity:0];
 
-  BOOL isXcode5 = (NSClassFromString(@"IDECommandLineBuildLogRecorder") != NULL);
-  BOOL isXcode4 = (NSClassFromString(@"Xcode3CommandLineBuildLogRecorder") != NULL);
+  BOOL isXcode5OrLater = (NSClassFromString(@"IDECommandLineBuildLogRecorder") != NULL);
 
-  // For each log item, Xcode will call a begin and end method.  (The naming of
-  // these methods is slightly different betwen Xcode 4 and 5.)
+  // For each log item, Xcode will call a begin and end method.
   //
   // This begin method is meant to announce the action that will be done. e.g.,
   // this would get called to print out the clang command that's about to be
@@ -310,20 +294,13 @@ __attribute__((constructor)) static void EntryPoint()
   // The end method is called once for every line item in the log, and is meant
   // to announce the result of something.  e.g., this would print out the error
   // text (if any) from a clang command that just ran.
-  if (isXcode5) {
+  if (isXcode5OrLater) {
     XTSwizzleSelectorForFunction(NSClassFromString(@"IDECommandLineBuildLogRecorder"),
                                  @selector(_emitSection:inSupersection:),
                                  (IMP)IDECommandLineBuildLogRecorder__emitSection_inSupersection);
     XTSwizzleSelectorForFunction(NSClassFromString(@"IDECommandLineBuildLogRecorder"),
                                  @selector(_cleanupClosedSection:inSupersection:),
                                  (IMP)IDECommandLineBuildLogRecorder__cleanupClosedSection_inSupersection);
-  } else if (isXcode4) {
-    XTSwizzleSelectorForFunction(NSClassFromString(@"Xcode3CommandLineBuildLogRecorder"),
-                                 @selector(_emitSection:),
-                                 (IMP)Xcode3CommandLineBuildLogRecorder__emitSection);
-    XTSwizzleSelectorForFunction(NSClassFromString(@"Xcode3CommandLineBuildLogRecorder"),
-                                 @selector(_finishEmittingClosedSection:),
-                                 (IMP)Xcode3CommandLineBuildLogRecorder__finishEmittingClosedSection);
   } else {
     NSCAssert(NO,
               @"Hrm. We're running in a version of xcodebuild which seems "

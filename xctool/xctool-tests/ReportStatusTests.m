@@ -1,18 +1,33 @@
+//
+// Copyright 2004-present Facebook. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
-#import <SenTestingKit/SenTestingKit.h>
+#import <XCTest/XCTest.h>
 
 #import "EventBuffer.h"
 #import "ReportStatus.h"
 #import "Swizzler.h"
 
-@interface ReportStatusTests : SenTestCase
+@interface ReportStatusTests : XCTestCase
 @end
 
 @implementation ReportStatusTests
 
 - (void)testReportStatusMessageGeneratesTwoEventsWithTheSameTimestamp
 {
-  EventBuffer *buffer = [[[EventBuffer alloc] init] autorelease];
+  EventBuffer *buffer = [[EventBuffer alloc] init];
 
   NSDate *staticDate = [NSDate dateWithTimeIntervalSince1970:0];
 
@@ -30,20 +45,20 @@
                      @"event" : @"begin-status",
                      @"level" : @"Info",
                      @"message" : @"An info message.",
-                     @"timestamp" : @(0),
+                     @"timestamp" : @0,
                      },
                      @{
                      @"event" : @"end-status",
                      @"level" : @"Info",
                      @"message" : @"An info message.",
-                     @"timestamp" : @(0),
+                     @"timestamp" : @0,
                      },
                      ]));
 }
 
 - (void)testReportStatusMessageBeginGeneratesAnEvent
 {
-  EventBuffer *buffer = [[[EventBuffer alloc] init] autorelease];
+  EventBuffer *buffer = [[EventBuffer alloc] init];
 
   NSDate *staticDate = [NSDate dateWithTimeIntervalSince1970:10];
 
@@ -61,14 +76,14 @@
                      @"event" : @"begin-status",
                      @"level" : @"Info",
                      @"message" : @"An info message.",
-                     @"timestamp" : @(10),
+                     @"timestamp" : @10,
                      },
                      ]));
 }
 
 - (void)testReportStatusMessageEndGeneratesAnEvent
 {
-  EventBuffer *buffer = [[[EventBuffer alloc] init] autorelease];
+  EventBuffer *buffer = [[EventBuffer alloc] init];
 
   NSDate *staticDate = [NSDate dateWithTimeIntervalSince1970:20];
 
@@ -86,7 +101,7 @@
                      @"event" : @"end-status",
                      @"level" : @"Info",
                      @"message" : @"An info message.",
-                     @"timestamp" : @(20),
+                     @"timestamp" : @20,
                      },
                      ]));
 }

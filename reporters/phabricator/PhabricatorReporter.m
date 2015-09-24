@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,9 +18,16 @@
 
 #import "ReporterEvents.h"
 
+@interface PhabricatorReporter ()
+@property (nonatomic, copy) NSDictionary *currentBuildCommand;
+@property (nonatomic, copy) NSMutableArray *currentTargetFailures;
+@property (nonatomic, copy) NSMutableArray *results;
+@property (nonatomic, copy) NSString *scheme;
+@end
+
 @implementation PhabricatorReporter
 
-- (id)init
+- (instancetype)init
 {
   if (self = [super init]) {
     _results = [[NSMutableArray alloc] init];
@@ -28,21 +35,14 @@
   return self;
 }
 
-- (void)dealloc
-{
-  [_results release];
-  [_scheme release];
-  [super dealloc];
-}
 
 - (void)beginAction:(NSDictionary *)event
 {
-  _scheme = [event[kReporter_BeginAction_SchemeKey] retain];
+  _scheme = event[kReporter_BeginAction_SchemeKey];
 }
 
 - (void)endAction:(NSDictionary *)event
 {
-  [_scheme release];
   _scheme = nil;
 }
 
@@ -65,13 +65,12 @@
    @"extra" : [NSNull null],
    }];
 
-  [_currentTargetFailures release];
   _currentTargetFailures = nil;
 }
 
 - (void)beginBuildCommand:(NSDictionary *)event
 {
-  _currentBuildCommand = [event retain];
+  _currentBuildCommand = event;
 }
 
 - (void)endBuildCommand:(NSDictionary *)event
@@ -84,7 +83,6 @@
     [_currentTargetFailures addObject:commandAndFailure];
   }
 
-  [_currentBuildCommand release];
   _currentBuildCommand = nil;
 }
 
@@ -164,7 +162,7 @@
                                                   options:NSJSONWritingPrettyPrinted
                                                     error:&error];
   NSAssert(error == nil, @"Failed while trying to encode as JSON: %@", error);
-  return [[[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] autorelease];
+  return [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
 }
 
 - (void)didFinishReporting

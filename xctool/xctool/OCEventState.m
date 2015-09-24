@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 //
 
 #import "OCEventState.h"
+
 #import "XCToolUtil.h"
 
 @implementation OCEventState
@@ -23,16 +24,11 @@
 {
   self = [super init];
   if (self) {
-    _reporters = [reporters retain];
+    _reporters = reporters;
   }
   return self;
 }
 
-- (void)dealloc
-{
-  [_reporters release];
-  [super dealloc];
-}
 
 - (void)publishWithEvent:(NSDictionary *)event
 {

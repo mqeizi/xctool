@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,13 +16,13 @@
 
 #import <Foundation/Foundation.h>
 
-typedef enum {
+typedef NS_ENUM(NSInteger, ReporterMessageLevel) {
   REPORTER_MESSAGE_DEBUG,
   REPORTER_MESSAGE_VERBOSE,
   REPORTER_MESSAGE_INFO,
   REPORTER_MESSAGE_WARNING,
   REPORTER_MESSAGE_ERROR,
-} ReporterMessageLevel;
+} ;
 
 NSString *ReporterMessageLevelToString(ReporterMessageLevel level);
 

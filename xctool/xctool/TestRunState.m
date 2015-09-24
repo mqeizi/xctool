@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,10 +18,17 @@
 
 #import <QuartzCore/QuartzCore.h>
 
-#import "ReporterEvents.h"
-#import "OCTestSuiteEventState.h"
 #import "OCTestEventState.h"
+#import "OCTestSuiteEventState.h"
+#import "ReporterEvents.h"
 #import "XCToolUtil.h"
+
+@interface TestRunState ()
+@property (nonatomic, strong) OCTestSuiteEventState *testSuiteState;
+@property (nonatomic, strong) OCTestEventState *previousTestState;
+@property (nonatomic, copy) NSSet *crashReportsAtStart;
+@property (nonatomic, copy) NSMutableString *outputBeforeTestsStart;
+@end
 
 @implementation TestRunState
 
@@ -39,14 +46,16 @@
   return self;
 }
 
-- (void)dealloc
+- (instancetype)initWithTestSuiteEventState:(OCTestSuiteEventState *)suiteState
 {
-  [_testSuiteState release];
-  [_previousTestState release];
-  [_crashReportsAtStart release];
-  [_outputBeforeTestsStart release];
-  [super dealloc];
+  self = [super init];
+  if (self) {
+    _testSuiteState = suiteState;
+    _outputBeforeTestsStart = [[NSMutableString alloc] init];
+  }
+  return self;
 }
+
 
 - (void)setReporters:(NSArray *)reporters
 {
@@ -69,7 +78,12 @@
 - (void)prepareToRun
 {
   NSAssert(_crashReportsAtStart == nil, @"Should not have set yet.");
-  _crashReportsAtStart = [[NSSet setWithArray:[self collectCrashReportPaths]] retain];
+  _crashReportsAtStart = [NSSet setWithArray:[self collectCrashReportPaths]];
+}
+
+- (void)publishEventToReporters:(NSDictionary *)event
+{
+  PublishEventToReporters(_testSuiteState.reporters, event);
 }
 
 - (void)outputBeforeTestBundleStarts:(NSDictionary *)event
@@ -79,12 +93,15 @@
 
 - (void)beginTestSuite:(NSDictionary *)event
 {
-  NSAssert(![_testSuiteState isStarted], @"Test suite already started!");
   NSAssert([event[kReporter_BeginTestSuite_SuiteKey] isEqualTo:kReporter_TestSuite_TopLevelSuiteName],
            @"Expected to begin test suite `%@', got `%@'",
            kReporter_TestSuite_TopLevelSuiteName, event[kReporter_BeginTestSuite_SuiteKey]);
 
-  [_testSuiteState beginTestSuite];
+  if ([_testSuiteState isStarted]) {
+    return;
+  }
+
+  [_testSuiteState beginTestSuite:event];
 }
 
 - (void)beginTest:(NSDictionary *)event
@@ -94,6 +111,8 @@
   OCTestEventState *state = [_testSuiteState getTestWithTestName:testName];
   NSAssert(state, @"Can't find test state for '%@', check senTestList", testName);
   [state stateBeginTest];
+
+  [self publishEventToReporters:event];
 }
 
 - (void)endTest:(NSDictionary *)event
@@ -107,15 +126,16 @@
              duration:[event[kReporter_EndTest_TotalDurationKey] doubleValue]];
 
   if (_previousTestState) {
-    [_previousTestState release];
     _previousTestState = nil;
   }
-  _previousTestState = [state retain];
+  _previousTestState = state;
+
+  [self publishEventToReporters:event];
 }
 
 - (void)endTestSuite:(NSDictionary *)event
 {
-  [_testSuiteState endTestSuite];
+  [_testSuiteState endTestSuite:event];
 }
 
 - (void)testOutput:(NSDictionary *)event
@@ -123,6 +143,8 @@
   OCTestEventState *test = [_testSuiteState runningTest];
   NSAssert(test, @"Got output with no test running");
   [test stateTestOutput:event[kReporter_TestOutput_OutputKey]];
+
+  [self publishEventToReporters:event];
 }
 
 - (void)handleStartupError:(NSString *)startupError
@@ -131,7 +153,7 @@
                                                     withObject:[NSString stringWithFormat:@"Test did not run: %@", startupError]];
 
   // Insert a place holder test to hold detailed error info.
-  OCTestEventState *fakeTest = [[[OCTestEventState alloc] initWithInputName:@"TEST_BUNDLE/FAILED_TO_START"] autorelease];
+  OCTestEventState *fakeTest = [[OCTestEventState alloc] initWithInputName:@"TEST_BUNDLE/FAILED_TO_START"];
   // Append crash reports (if any) to the place holder test.
   NSString *fakeTestOutput = [NSString stringWithFormat:
                               @"There was a problem starting the test bundle: %@\n"
@@ -144,19 +166,21 @@
   [_testSuiteState insertTest:fakeTest atIndex:0];
 }
 
-- (void)handleCrashBeforeAnyTestsRan
+- (void)handleCrashBeforeAnyTestsRanWithOtherErrors:(NSString *)otherErrors
 {
   // The test runner crashed before any tests ran.
-  OCTestEventState *fakeTest = [[[OCTestEventState alloc] initWithInputName:@"FAILED_BEFORE/TESTS_RAN"] autorelease];
+  OCTestEventState *fakeTest = [[OCTestEventState alloc] initWithInputName:@"FAILED_BEFORE/TESTS_RAN"];
   [_testSuiteState insertTest:fakeTest atIndex:0];
 
   // All tests should include this message.
+  NSString *output = @"Test did not run: the test bundle stopped running or crashed before the test suite started.";
   [_testSuiteState.tests makeObjectsPerformSelector:@selector(appendOutput:)
-                                         withObject:@"Test did not run: the test bundle stopped running or crashed before the test suite started."];
+                                         withObject:output];
 
   // And, our "place holder" test should have a more detailed message about
   // what we think went wrong.
-  NSString *fakeTestOutput = [NSString stringWithFormat:@"%@\n%@",
+  NSString *fakeTestOutput = [NSString stringWithFormat:@"%@\n%@\n%@",
+                              otherErrors ?: @"",
                               _outputBeforeTestsStart,
                               [self collectCrashReports:_crashReportsAtStart]];
   fakeTestOutput = [fakeTestOutput stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
@@ -170,12 +194,9 @@
                                      @"Test crashed while running.\n\n%@",
                                      [self collectCrashReports:_crashReportsAtStart]];
   outputForCrashingTest = [outputForCrashingTest stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
-  NSString *outputForOtherTests = [NSString stringWithFormat:
-                                   @"Test did not run: the test bundle stopped running or crashed in '%@'.",
-                                   [[_testSuiteState runningTest] testName]];
 
   [[_testSuiteState runningTest] appendOutput:outputForCrashingTest];
-  [[_testSuiteState unstartedTests] makeObjectsPerformSelector:@selector(appendOutput:) withObject:outputForOtherTests];
+  [[_testSuiteState runningTest] publishEvents];
 }
 
 - (void)handleCrashAfterTest
@@ -185,12 +206,6 @@
   // something, but it could be a lot of things.
   NSAssert(_previousTestState != nil, @"We should have some info on the last test that ran.");
   NSUInteger previousTestStateIndex = [[_testSuiteState tests] indexOfObject:_previousTestState];
-
-  // We should annotate all tests that never ran.
-  [[_testSuiteState unstartedTests] makeObjectsPerformSelector:@selector(appendOutput:)
-                                                    withObject:[NSString stringWithFormat:
-                                                                @"Test did not run: the test bundle stopped running or crashed after running '%@'.",
-                                                                [_previousTestState testName]]];
 
   // Insert a place-holder test to hold information on the crash.
   NSString *fakeTestName = [NSString stringWithFormat:@"%@/%@_MAYBE_CRASHED",
@@ -205,21 +220,23 @@
                               [self collectCrashReports:_crashReportsAtStart]];
   fakeTestOutput = [fakeTestOutput stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
 
-  OCTestEventState *fakeTest = [[[OCTestEventState alloc] initWithInputName:fakeTestName] autorelease];
+  OCTestEventState *fakeTest = [[OCTestEventState alloc] initWithInputName:fakeTestName];
   [fakeTest appendOutput:fakeTestOutput];
 
   [_testSuiteState insertTest:fakeTest atIndex:previousTestStateIndex + 1];
 }
 
-- (void)didFinishRunWithStartupError:(NSString *)startupError
+- (void)didFinishRunWithStartupError:(NSString *)startupError otherErrors:(NSString *)otherErrors
 {
   if (![_testSuiteState isStarted] && startupError != nil) {
     [self handleStartupError:startupError];
   } else if ((![_testSuiteState isStarted] && startupError == nil) ||
              ([_testSuiteState isStarted] && [_testSuiteState unstartedTests].count == [_testSuiteState testCount])) {
-    [self handleCrashBeforeAnyTestsRan];
+    [self handleCrashBeforeAnyTestsRanWithOtherErrors:otherErrors];
   } else if (![_testSuiteState isFinished] && [_testSuiteState runningTest] != nil) {
     [self handleCrashDuringTest];
+    [_testSuiteState publishEventsForFinishedTests];
+    return;
   } else if (![_testSuiteState isFinished] &&
              [_testSuiteState runningTest] == nil) {
     [self handleCrashAfterTest];
@@ -231,26 +248,29 @@
 - (NSArray *)collectCrashReportPaths
 {
   NSFileManager *fm = [NSFileManager defaultManager];
-  NSString *diagnosticReportsPath = [@"~/Library/Logs/DiagnosticReports" stringByStandardizingPath];
-
-  BOOL isDirectory = NO;
-  BOOL fileExists = [fm fileExistsAtPath:diagnosticReportsPath
-                             isDirectory:&isDirectory];
-  if (!fileExists || !isDirectory) {
-    return @[];
-  }
-
-  NSError *error = nil;
-  NSArray *allContents = [fm contentsOfDirectoryAtPath:diagnosticReportsPath
-                                                 error:&error];
-  NSAssert(error == nil, @"Failed getting contents of directory: %@", error);
+  NSArray *diagnosticReportsPaths = @[
+    [@"~/Library/Logs/DiagnosticReports" stringByStandardizingPath],
+    @"/Library/Logs/DiagnosticReports",
+  ];
 
   NSMutableArray *matchingContents = [NSMutableArray array];
+  for (NSString *diagnosticReportsPath in diagnosticReportsPaths) {
+    BOOL isDirectory = NO;
+    BOOL fileExists = [fm fileExistsAtPath:diagnosticReportsPath
+                               isDirectory:&isDirectory];
+    if (!fileExists || !isDirectory) {
+      continue;
+    }
 
-  for (NSString *path in allContents) {
-    if ([[path pathExtension] isEqualToString:@"crash"]) {
-      NSString *fullPath = [[@"~/Library/Logs/DiagnosticReports" stringByAppendingPathComponent:path] stringByStandardizingPath];
-      [matchingContents addObject:fullPath];
+    NSDirectoryEnumerator *enumerator = [fm enumeratorAtURL:[NSURL fileURLWithPath:diagnosticReportsPath]
+                                 includingPropertiesForKeys:nil
+                                                    options:NSDirectoryEnumerationSkipsHiddenFiles
+                                               errorHandler:nil];
+    NSURL *fileUrl = nil;
+    while ((fileUrl = [enumerator nextObject])) {
+      if ([[fileUrl pathExtension] isEqualToString:@"crash"]) {
+        [matchingContents addObject:fileUrl];
+      }
     }
   }
 
@@ -261,12 +281,15 @@
 {
   NSMutableString *buffer = [NSMutableString string];
 
-  for (NSString *path in reports) {
-    NSString *crashReportText = [NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding error:nil];
+  for (NSURL *fileURL in reports) {
+    NSString *crashReportText = [NSString stringWithContentsOfURL:fileURL encoding:NSUTF8StringEncoding error:nil];
     // Throw out everything below "Binary Images" - we mostly just care about the thread backtraces.
-    NSString *minimalCrashReportText = [crashReportText substringToIndex:[crashReportText rangeOfString:@"\nBinary Images:"].location];
-
-    [buffer appendFormat:@"CRASH REPORT: %@\n\n", [path lastPathComponent]];
+    NSRange range = [crashReportText rangeOfString:@"\nBinary Images:"];
+    if (!crashReportText || range.location == NSNotFound) {
+      continue;
+    }
+    NSString *minimalCrashReportText = [crashReportText substringToIndex:range.location];
+    [buffer appendFormat:@"CRASH REPORT: %@\n\n", [fileURL lastPathComponent]];
     [buffer appendString:minimalCrashReportText];
     [buffer appendString:@"\n"];
   }

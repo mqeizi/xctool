@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,10 +19,13 @@
 #import <poll.h>
 
 #import "NSConcreteTask.h"
+#import "SimDevice.h"
+#import "SimulatorInfo.h"
 #import "Swizzle.h"
 #import "XCToolUtil.h"
 
-static void readOutputs(NSString **outputs, int *fildes, int sz) {
+static NSArray *readOutputs(int *fildes, int sz) {
+  NSMutableArray *outputs = [NSMutableArray arrayWithCapacity:sz];
   struct pollfd fds[sz];
   dispatch_data_t data[sz];
 
@@ -87,11 +90,13 @@ static void readOutputs(NSString **outputs, int *fildes, int sz) {
     dispatch_data_t contig = dispatch_data_create_map(data[i], &dataPtr, &dataSz);
 
     NSString *str = [[NSString alloc] initWithBytes:dataPtr length:dataSz encoding:NSUTF8StringEncoding];
-    outputs[i] = str;
+    [outputs addObject:str];
 
     dispatch_release(data[i]);
     dispatch_release(contig);
   }
+
+  return outputs;
 }
 
 NSDictionary *LaunchTaskAndCaptureOutput(NSTask *task, NSString *description)
@@ -106,10 +111,9 @@ NSDictionary *LaunchTaskAndCaptureOutput(NSTask *task, NSString *description)
   [task setStandardError:stderrPipe];
   LaunchTaskAndMaybeLogCommand(task, description);
 
-  NSString *outputs[2] = {nil, nil};
   int fides[2] = {stdoutHandle.fileDescriptor, stderrHandle.fileDescriptor};
 
-  readOutputs(outputs, fides, 2);
+  NSArray *outputs = readOutputs(fides, 2);
 
   [task waitUntilExit];
 
@@ -117,9 +121,6 @@ NSDictionary *LaunchTaskAndCaptureOutput(NSTask *task, NSString *description)
             @"output should have been populated");
 
   NSDictionary *output = @{@"stdout" : outputs[0], @"stderr" : outputs[1]};
-
-  [outputs[0] release];
-  [outputs[1] release];
 
   return output;
 }
@@ -133,17 +134,16 @@ NSString *LaunchTaskAndCaptureOutputInCombinedStream(NSTask *task, NSString *des
   [task setStandardError:outputPipe];
   LaunchTaskAndMaybeLogCommand(task, description);
 
-  NSString *outputs[1] = {nil};
   int fides[1] = {outputHandle.fileDescriptor};
 
-  readOutputs(outputs, fides, 1);
+  NSArray *outputs = readOutputs(fides, 1);
 
   [task waitUntilExit];
 
   NSCAssert(outputs[0] != nil,
             @"output should have been populated");
 
-  return [outputs[0] autorelease];
+  return outputs[0];
 }
 
 void LaunchTaskAndFeedOuputLinesToBlock(NSTask *task, NSString *description, void (^block)(NSString *))
@@ -155,26 +155,26 @@ void LaunchTaskAndFeedOuputLinesToBlock(NSTask *task, NSString *description, voi
   NSCAssert(fcntl(stdoutReadFD, F_SETFL, flags | O_NONBLOCK) != -1,
             @"Failed to set O_NONBLOCK: %s", strerror(errno));
 
-  NSMutableString *buffer = [[NSMutableString alloc] initWithCapacity:0];
+  NSMutableData *buffer = [[NSMutableData alloc] initWithCapacity:0];
 
   // Split whatever content we have in 'buffer' into lines.
   void (^processBuffer)(void) = ^{
     NSUInteger offset = 0;
-
+    NSData *newlineData = [NSData dataWithBytes:"\n" length:1];
     for (;;) {
-      NSRange newlineRange = [buffer rangeOfString:@"\n"
-                                           options:0
-                                             range:NSMakeRange(offset, [buffer length] - offset)];
+      NSRange newlineRange = [buffer rangeOfData:newlineData
+                                         options:0
+                                           range:NSMakeRange(offset, [buffer length] - offset)];
       if (newlineRange.length == 0) {
         break;
       } else {
-        NSString *line = [buffer substringWithRange:NSMakeRange(offset, newlineRange.location - offset)];
-        block(line);
+        NSData *line = [buffer subdataWithRange:NSMakeRange(offset, newlineRange.location - offset)];
+        block([[NSString alloc] initWithData:line encoding:NSUTF8StringEncoding]);
         offset = newlineRange.location + 1;
       }
     }
 
-    [buffer replaceCharactersInRange:NSMakeRange(0, offset) withString:@""];
+    [buffer replaceBytesInRange:NSMakeRange(0, offset) withBytes:NULL length:0];
   };
 
   // Uses poll() to block until data (or EOF) is available.
@@ -225,10 +225,7 @@ void LaunchTaskAndFeedOuputLinesToBlock(NSTask *task, NSString *description, voi
       ssize_t bytesRead = read(stdoutReadFD, readBuffer, sizeof(readBuffer));
       if (bytesRead > 0) {
         @autoreleasepool {
-          NSString *str = [[NSString alloc] initWithBytes:readBuffer length:bytesRead encoding:NSUTF8StringEncoding];
-          [buffer appendString:str];
-          [str release];
-
+          [buffer appendBytes:readBuffer length:bytesRead];
           processBuffer();
         }
       } else if ((bytesRead == 0) ||
@@ -248,7 +245,6 @@ void LaunchTaskAndFeedOuputLinesToBlock(NSTask *task, NSString *description, voi
   }
 
   [task waitUntilExit];
-  [buffer release];
 }
 
 NSTask *CreateTaskInSameProcessGroupWithArch(cpu_type_t arch)
@@ -354,10 +350,6 @@ static NSString *CommandLineEquivalentForTaskArchGenericTask(NSConcreteTask *tas
   return buffer;
 }
 
-/**
- * Returns a command-line expression which includes the environment, launch
- * path, and args to reproduce a given task.
- */
 NSString *CommandLineEquivalentForTask(NSConcreteTask *task)
 {
   NSCAssert(task.launchPath != nil, @"Should have a launchPath");
@@ -393,36 +385,45 @@ void LaunchTaskAndMaybeLogCommand(NSTask *task, NSString *description)
   [task launch];
 }
 
-NSTask *CreateTaskForSimulatorExecutable(cpu_type_t cpuType,
-                                         NSString *sdkVersion,
+NSTask *CreateTaskForSimulatorExecutable(NSString *sdkName,
+                                         SimulatorInfo *simulatorInfo,
                                          NSString *launchPath,
                                          NSArray *arguments,
                                          NSDictionary *environment)
 {
-  NSMutableArray *taskArgs = [NSMutableArray array];
-  [taskArgs addObjectsFromArray:@[[@"--arch=" stringByAppendingString:(cpuType == CPU_TYPE_X86_64) ? @"64" : @"32"],
-                                  [@"--sdk=" stringByAppendingString:sdkVersion],
-                                  @"--environment=merge",
-                                  ]];
-  [taskArgs addObject:launchPath];
-  [taskArgs addObjectsFromArray:arguments];
-
-  NSMutableDictionary *taskEnv = [NSMutableDictionary dictionary];
-  taskEnv[@"DYLD_INSERT_LIBRARIES"] = [XCToolLibPath() stringByAppendingPathComponent:@"sim-shim.dylib"];
-
-  [environment enumerateKeysAndObjectsUsingBlock:^(id key, id val, BOOL *stop){
-    // sim-shim.dylib will look for all vars prefixed with SIMSHIM_ and add them
-    // to the spawned process's environment (with the prefix removed).
-    NSString *newKey = [@"SIMSHIM_" stringByAppendingString:key];
-    taskEnv[newKey] = val;
-  }];
-
   NSTask *task = CreateTaskInSameProcessGroup();
+  NSMutableArray *taskArgs = [NSMutableArray array];
+  NSMutableDictionary *taskEnv = [NSMutableDictionary dictionary];
 
-  [task setLaunchPath:[XcodeDeveloperDirPath() stringByAppendingPathComponent:@"Platforms/iPhoneSimulator.platform/usr/bin/sim"]];
+  if ([sdkName hasPrefix:@"iphonesimulator"]) {
+    [taskArgs addObjectsFromArray:@[
+      @"spawn",
+      [[[simulatorInfo simulatedDevice] UDID] UUIDString],
+    ]];
+    [taskArgs addObject:launchPath];
+    [taskArgs addObjectsFromArray:arguments];
+
+    [environment enumerateKeysAndObjectsUsingBlock:^(id key, id val, BOOL *stop){
+      // simctl has a bug where it hangs if an empty child environment variable is set.
+      if ([val length] == 0) {
+        return;
+      }
+
+      // simctl will look for all vars prefixed with SIMCTL_CHILD_ and add them
+      // to the spawned process's environment (with the prefix removed).
+      NSString *newKey = [@"SIMCTL_CHILD_" stringByAppendingString:key];
+      taskEnv[newKey] = val;
+    }];
+
+    [task setLaunchPath:[XcodeDeveloperDirPath() stringByAppendingPathComponent:@"usr/bin/simctl"]];
+  } else {
+    [task setLaunchPath:launchPath];
+    [taskArgs addObjectsFromArray:arguments];
+    [taskEnv addEntriesFromDictionary:environment];
+  }
+
   [task setArguments:taskArgs];
   [task setEnvironment:taskEnv];
 
   return task;
 }
-

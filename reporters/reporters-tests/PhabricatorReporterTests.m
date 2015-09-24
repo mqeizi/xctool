@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,12 +14,12 @@
 // limitations under the License.
 //
 
-#import <SenTestingKit/SenTestingKit.h>
+#import <XCTest/XCTest.h>
 
 #import "PhabricatorReporter.h"
 #import "Reporter+Testing.h"
 
-@interface PhabricatorReporterTests : SenTestCase
+@interface PhabricatorReporterTests : XCTestCase
 @end
 
 @implementation PhabricatorReporterTests

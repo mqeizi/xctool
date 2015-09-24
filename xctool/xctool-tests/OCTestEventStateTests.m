@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,16 +14,16 @@
 // limitations under the License.
 //
 
-#import <SenTestingKit/SenTestingKit.h>
+#import <XCTest/XCTest.h>
 
 #import "EventBuffer.h"
-#import "EventSink.h"
 #import "EventGenerator.h"
+#import "EventSink.h"
 #import "OCTestEventState.h"
 #import "ReporterEvents.h"
 #import "TestUtil.h"
 
-@interface OCTestEventStateTests : SenTestCase
+@interface OCTestEventStateTests : XCTestCase
 @end
 
 @implementation OCTestEventStateTests
@@ -31,32 +31,32 @@
 - (void)testInitWithInputName
 {
   OCTestEventState *state =
-    [[[OCTestEventState alloc] initWithInputName:@"ATestClass/aTestMethod"
-                                       reporters:@[]] autorelease];
+    [[OCTestEventState alloc] initWithInputName:@"ATestClass/aTestMethod"
+                                       reporters:@[]];
 
   assertThat([state testName], equalTo(@"-[ATestClass aTestMethod]"));
 }
 
 - (void)testInitWithInvalidInputName
 {
-  STAssertThrowsSpecific([[[OCTestEventState alloc] initWithInputName:@"ATestClassaTestMethod"
-                                                            reporters: @[]] autorelease],
+  XCTAssertThrowsSpecific([[OCTestEventState alloc] initWithInputName:@"ATestClassaTestMethod"
+                                                            reporters: @[]],
                          NSException, @"Invalid class name should have raised exception");
 }
 
 - (void)testPublishFromStarted
 {
-  EventBuffer *eventBuffer = [[[EventBuffer alloc] init] autorelease];
-  OCTestEventState *state = [[[OCTestEventState alloc] initWithInputName:@"ATestClass/aTestMethod"
-                                                               reporters:@[eventBuffer]] autorelease];
+  EventBuffer *eventBuffer = [[EventBuffer alloc] init];
+  OCTestEventState *state = [[OCTestEventState alloc] initWithInputName:@"ATestClass/aTestMethod"
+                                                               reporters:@[eventBuffer]];
 
-  assertThatBool(state.isStarted, equalToBool(NO));
-  assertThatBool(state.isFinished, equalToBool(NO));
+  assertThatBool(state.isStarted, isFalse());
+  assertThatBool(state.isFinished, isFalse());
 
   [state stateBeginTest];
 
-  assertThatBool(state.isStarted, equalToBool(YES));
-  assertThatBool(state.isFinished, equalToBool(NO));
+  assertThatBool(state.isStarted, isTrue());
+  assertThatBool(state.isFinished, isFalse());
 
   [state publishEvents];
   NSArray *events = eventBuffer.events;
@@ -66,19 +66,19 @@
   assertThat(events[0][kReporter_EndTest_SucceededKey], is(@NO));
   assertThat(events[0][kReporter_EndTest_ResultKey], is(@"error"));
 
-  assertThatBool(state.isStarted, equalToBool(YES));
-  assertThatBool(state.isFinished, equalToBool(YES));
+  assertThatBool(state.isStarted, isTrue());
+  assertThatBool(state.isFinished, isTrue());
 }
 
 - (void)testPublishFromNotStarted
 {
-  EventBuffer *eventBuffer = [[[EventBuffer alloc] init] autorelease];
+  EventBuffer *eventBuffer = [[EventBuffer alloc] init];
   OCTestEventState *state =
-  [[[OCTestEventState alloc] initWithInputName:@"ATestClass/aTestMethod"
-                                     reporters:@[eventBuffer]] autorelease];
+  [[OCTestEventState alloc] initWithInputName:@"ATestClass/aTestMethod"
+                                     reporters:@[eventBuffer]];
 
-  assertThatBool(state.isStarted, equalToBool(NO));
-  assertThatBool(state.isFinished, equalToBool(NO));
+  assertThatBool(state.isStarted, isFalse());
+  assertThatBool(state.isFinished, isFalse());
 
   [state publishEvents];
   NSArray *events = eventBuffer.events;
@@ -94,53 +94,53 @@
   assertThat(events[1][kReporter_EndTest_SucceededKey], is(@NO));
   assertThat(events[1][kReporter_EndTest_ResultKey], is(@"error"));
 
-  assertThatBool(state.isStarted, equalToBool(YES));
-  assertThatBool(state.isFinished, equalToBool(YES));
+  assertThatBool(state.isStarted, isTrue());
+  assertThatBool(state.isFinished, isTrue());
 }
 
 - (void)testStates
 {
   OCTestEventState *state =
-  [[[OCTestEventState alloc] initWithInputName:@"ATestClass/aTestMethod"] autorelease];
+  [[OCTestEventState alloc] initWithInputName:@"ATestClass/aTestMethod"];
 
-  assertThatBool(state.isStarted, equalToBool(NO));
-  assertThatBool(state.isFinished, equalToBool(NO));
-  assertThatBool(state.isSuccessful, equalToBool(NO));
-  assertThatBool([state isRunning], equalToBool(NO));
+  assertThatBool(state.isStarted, isFalse());
+  assertThatBool(state.isFinished, isFalse());
+  assertThatBool(state.isSuccessful, isFalse());
+  assertThatBool([state isRunning], isFalse());
   assertThat(state.result, is(@"error"));
 
   [state stateBeginTest];
 
-  assertThatBool(state.isStarted, equalToBool(YES));
-  assertThatBool(state.isFinished, equalToBool(NO));
-  assertThatBool(state.isSuccessful, equalToBool(NO));
-  assertThatBool([state isRunning], equalToBool(YES));
+  assertThatBool(state.isStarted, isTrue());
+  assertThatBool(state.isFinished, isFalse());
+  assertThatBool(state.isSuccessful, isFalse());
+  assertThatBool([state isRunning], isTrue());
 
   [state stateEndTest:YES result: @"success"];
 
-  assertThatBool(state.isStarted, equalToBool(YES));
-  assertThatBool(state.isFinished, equalToBool(YES));
-  assertThatBool(state.isSuccessful, equalToBool(YES));
-  assertThatBool([state isRunning], equalToBool(NO));
+  assertThatBool(state.isStarted, isTrue());
+  assertThatBool(state.isFinished, isTrue());
+  assertThatBool(state.isSuccessful, isTrue());
+  assertThatBool([state isRunning], isFalse());
   assertThat(state.result, is(@"success"));
 
   state =
-    [[[OCTestEventState alloc] initWithInputName:@"ATestClass/aTestMethod"] autorelease];
+    [[OCTestEventState alloc] initWithInputName:@"ATestClass/aTestMethod"];
   [state stateBeginTest];
   [state stateEndTest:NO result: @"failure"];
 
-  assertThatBool(state.isStarted, equalToBool(YES));
-  assertThatBool(state.isFinished, equalToBool(YES));
-  assertThatBool(state.isSuccessful, equalToBool(NO));
-  assertThatBool([state isRunning], equalToBool(NO));
+  assertThatBool(state.isStarted, isTrue());
+  assertThatBool(state.isFinished, isTrue());
+  assertThatBool(state.isSuccessful, isFalse());
+  assertThatBool([state isRunning], isFalse());
   assertThat(state.result, is(@"failure"));
 }
 
 - (void)testOutput
 {
-  EventBuffer *eventBuffer = [[[EventBuffer alloc] init] autorelease];
+  EventBuffer *eventBuffer = [[EventBuffer alloc] init];
   OCTestEventState *state =
-  [[[OCTestEventState alloc] initWithInputName:@"ATestClass/aTestMethod" reporters:@[eventBuffer]] autorelease];
+  [[OCTestEventState alloc] initWithInputName:@"ATestClass/aTestMethod" reporters:@[eventBuffer]];
 
   [state stateBeginTest];
   [state stateTestOutput:@"some output\n"];
@@ -156,9 +156,9 @@
 
 - (void)testPublishOutput
 {
-  EventBuffer *eventBuffer = [[[EventBuffer alloc] init] autorelease];
+  EventBuffer *eventBuffer = [[EventBuffer alloc] init];
   OCTestEventState *state =
-  [[[OCTestEventState alloc] initWithInputName:@"ATestClass/aTestMethod" reporters:@[eventBuffer]] autorelease];
+  [[OCTestEventState alloc] initWithInputName:@"ATestClass/aTestMethod" reporters:@[eventBuffer]];
 
   [state stateBeginTest];
   [state stateTestOutput:@"some output\n"];
@@ -175,9 +175,9 @@
 
 - (void)testAppendOutput
 {
-  EventBuffer *eventBuffer = [[[EventBuffer alloc] init] autorelease];
+  EventBuffer *eventBuffer = [[EventBuffer alloc] init];
   OCTestEventState *state =
-  [[[OCTestEventState alloc] initWithInputName:@"ATestClass/aTestMethod" reporters:@[eventBuffer]] autorelease];
+  [[OCTestEventState alloc] initWithInputName:@"ATestClass/aTestMethod" reporters:@[eventBuffer]];
 
   [state stateBeginTest];
   [state stateTestOutput:@"some output\n"];
@@ -196,9 +196,9 @@
 
 - (void)testDuration
 {
-  EventBuffer *eventBuffer = [[[EventBuffer alloc] init] autorelease];
+  EventBuffer *eventBuffer = [[EventBuffer alloc] init];
   OCTestEventState *state =
-  [[[OCTestEventState alloc] initWithInputName:@"ATestClass/aTestMethod" reporters:@[eventBuffer]] autorelease];
+  [[OCTestEventState alloc] initWithInputName:@"ATestClass/aTestMethod" reporters:@[eventBuffer]];
 
   [state stateBeginTest];
 
@@ -206,19 +206,19 @@
   NSArray *events = eventBuffer.events;
 
   assertThatInteger([events count], equalToInteger(1));
-  assertThatFloat(state.duration, greaterThan(@0.0));
+  assertThatDouble(state.duration, greaterThan(@0.0));
   assertThat(events[0][kReporter_EndTest_TotalDurationKey], closeTo(state.duration, 0.005f));
 }
 
 - (void)testEndWithDuration
 {
   OCTestEventState *state =
-    [[[OCTestEventState alloc] initWithInputName:@"ATestClass/aTestMethod"] autorelease];
+    [[OCTestEventState alloc] initWithInputName:@"ATestClass/aTestMethod"];
 
   [state stateBeginTest];
   [state stateEndTest:YES result:@"success" duration:123.4];
 
-  assertThatFloat(state.duration, closeTo(123.4, 0.005f));
+  assertThatDouble(state.duration, closeTo(123.4, 0.005f));
 }
 
 @end

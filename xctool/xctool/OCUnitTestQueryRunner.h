@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,17 +16,17 @@
 
 #import <Foundation/Foundation.h>
 
-@interface OCUnitTestQueryRunner : NSObject {
-  NSDictionary *_buildSettings;
+@class SimulatorInfo;
+
+@interface OCUnitTestQueryRunner : NSObject
+{
+@protected
+  SimulatorInfo *_simulatorInfo;
 }
 
-@property (nonatomic, assign) cpu_type_t cpuType;
-
-- (instancetype)initWithBuildSettings:(NSDictionary *)buildSettings
-                          withCpuType:(cpu_type_t)cpuType;
+- (instancetype)initWithSimulatorInfo:(SimulatorInfo *)simulatorInfo;
 - (NSTask *)createTaskForQuery NS_RETURNS_RETAINED;
+- (void)prepareToRunQuery;
 - (NSArray *)runQueryWithError:(NSString **)error;
-- (NSString *)bundlePath;
-- (NSString *)testHostPath;
 
 @end

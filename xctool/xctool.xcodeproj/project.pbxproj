@@ -26,7 +26,6 @@
 		283479B916E3EBE5003C3B77 /* TestUtil.m in Sources */ = {isa = PBXBuildFile; fileRef = 283479B816E3EBE5003C3B77 /* TestUtil.m */; };
 		283479BC16E3FC0F003C3B77 /* BuildTestsActionTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 283479BB16E3FC0E003C3B77 /* BuildTestsActionTests.m */; };
 		283CCA4616C2EA3800F2E343 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 283CCA4516C2EA3800F2E343 /* Foundation.framework */; };
-		283CCAC316C2EE9900F2E343 /* SenTestingKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 283CCA5916C2EA8B00F2E343 /* SenTestingKit.framework */; };
 		283CCAC416C2EE9900F2E343 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 283CCA5B16C2EA8B00F2E343 /* Cocoa.framework */; };
 		283CCACA16C2EE9900F2E343 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 283CCAC816C2EE9900F2E343 /* InfoPlist.strings */; };
 		283CCACD16C2EE9900F2E343 /* XCToolTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 283CCACC16C2EE9900F2E343 /* XCToolTests.m */; };
@@ -46,14 +45,10 @@
 		2878E7DD184EA4BC00FF4354 /* XcodeRequiredVersion.m in Sources */ = {isa = PBXBuildFile; fileRef = 2878E7DC184EA4BC00FF4354 /* XcodeRequiredVersion.m */; };
 		2878E7DE184EA4BC00FF4354 /* XcodeRequiredVersion.m in Sources */ = {isa = PBXBuildFile; fileRef = 2878E7DC184EA4BC00FF4354 /* XcodeRequiredVersion.m */; };
 		287A37DE16C711AF00319E81 /* LineReader.m in Sources */ = {isa = PBXBuildFile; fileRef = 287A37DD16C711AE00319E81 /* LineReader.m */; };
-		287A37E116C711E000319E81 /* SimulatorLauncher.m in Sources */ = {isa = PBXBuildFile; fileRef = 287A37E016C711E000319E81 /* SimulatorLauncher.m */; };
-		287A37E216C711E000319E81 /* SimulatorLauncher.m in Sources */ = {isa = PBXBuildFile; fileRef = 287A37E016C711E000319E81 /* SimulatorLauncher.m */; };
 		287A37E716C749D500319E81 /* LineReader.m in Sources */ = {isa = PBXBuildFile; fileRef = 287A37DD16C711AE00319E81 /* LineReader.m */; };
 		287BF04D16F1A6EB00590E06 /* XcodeSubjectInfoTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 287BF04C16F1A6EB00590E06 /* XcodeSubjectInfoTests.m */; };
 		287BF08416F1A97900590E06 /* XcodeSubjectInfo.m in Sources */ = {isa = PBXBuildFile; fileRef = 287BF08316F1A97900590E06 /* XcodeSubjectInfo.m */; };
 		287BF08516F1A97900590E06 /* XcodeSubjectInfo.m in Sources */ = {isa = PBXBuildFile; fileRef = 287BF08316F1A97900590E06 /* XcodeSubjectInfo.m */; };
-		287E0DC517CD60B00088A264 /* xctool-tests.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = 287E0DC417CD60B00088A264 /* xctool-tests.xcconfig */; };
-		28869AFC178CEA7600DED56A /* Initializer.m in Sources */ = {isa = PBXBuildFile; fileRef = 28869AFB178CEA7600DED56A /* Initializer.m */; };
 		28897FBD173E4C74004BA024 /* FakeTaskManagerTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 28897FBA173E4C73004BA024 /* FakeTaskManagerTests.m */; };
 		28897FD0173E6215004BA024 /* Swizzle.m in Sources */ = {isa = PBXBuildFile; fileRef = 28897FCF173E6215004BA024 /* Swizzle.m */; };
 		288980601742B675004BA024 /* FakeTaskManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 2889805F1742B675004BA024 /* FakeTaskManager.m */; };
@@ -82,7 +77,6 @@
 		28E28FC01797193F0072376C /* ReporterTaskTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 28E28FBF1797193F0072376C /* ReporterTaskTests.m */; };
 		28E9B97F16C2F1C600A52E4D /* XCToolUtil.m in Sources */ = {isa = PBXBuildFile; fileRef = 28E9B97E16C2F1C600A52E4D /* XCToolUtil.m */; };
 		28E9B98016C2F1C600A52E4D /* XCToolUtil.m in Sources */ = {isa = PBXBuildFile; fileRef = 28E9B97E16C2F1C600A52E4D /* XCToolUtil.m */; };
-		28E9B98416C2F2D900A52E4D /* xctool.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = 28E9B98316C2F2D900A52E4D /* xctool.xcconfig */; };
 		28E9B98B16C2FDA700A52E4D /* OCMockito.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 28E9B98A16C2FDA700A52E4D /* OCMockito.framework */; };
 		28E9B98C16C2FDB200A52E4D /* OCMockito.framework in CopyFiles */ = {isa = PBXBuildFile; fileRef = 28E9B98A16C2FDA700A52E4D /* OCMockito.framework */; };
 		28E9B98E16C2FE4800A52E4D /* OCHamcrest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 28E9B98D16C2FE4800A52E4D /* OCHamcrest.framework */; };
@@ -106,6 +100,11 @@
 		32A90C551725F05800C2349E /* TestAction.m in Sources */ = {isa = PBXBuildFile; fileRef = 32A90C521725F05800C2349E /* TestAction.m */; };
 		3892D7411811A5CC00E68652 /* EventGenerator.m in Sources */ = {isa = PBXBuildFile; fileRef = 3892D7401811A5CC00E68652 /* EventGenerator.m */; };
 		3892D7421811A5CC00E68652 /* EventGenerator.m in Sources */ = {isa = PBXBuildFile; fileRef = 3892D7401811A5CC00E68652 /* EventGenerator.m */; };
+		40623EBE190EA61B004FB374 /* InstallAction.m in Sources */ = {isa = PBXBuildFile; fileRef = 40623EBD190EA61B004FB374 /* InstallAction.m */; };
+		40623EBF190EA61B004FB374 /* InstallAction.m in Sources */ = {isa = PBXBuildFile; fileRef = 40623EBD190EA61B004FB374 /* InstallAction.m */; };
+		4DC218071B238A4F000C9AA6 /* ActionScripts.m in Sources */ = {isa = PBXBuildFile; fileRef = 4DC218061B238A4F000C9AA6 /* ActionScripts.m */; };
+		4DC2180A1B238AD3000C9AA6 /* ActionScripts.m in Sources */ = {isa = PBXBuildFile; fileRef = 4DC218061B238A4F000C9AA6 /* ActionScripts.m */; };
+		4DD0C68A1B25E25E005FFF7F /* ActionScriptsTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 4DD0C6891B25E25E005FFF7F /* ActionScriptsTests.m */; };
 		AA318BEF17E9BA3500BF159E /* TestingFramework.m in Sources */ = {isa = PBXBuildFile; fileRef = AA318BEE17E9BA3500BF159E /* TestingFramework.m */; };
 		AA318BF017E9BA3500BF159E /* TestingFramework.m in Sources */ = {isa = PBXBuildFile; fileRef = AA318BEE17E9BA3500BF159E /* TestingFramework.m */; };
 		AA6C88F71808C2C5006A3581 /* OTestShimTests.m in Sources */ = {isa = PBXBuildFile; fileRef = AA6C88F61808C2C5006A3581 /* OTestShimTests.m */; };
@@ -123,8 +122,25 @@
 		AAF334531806A4A400928A00 /* Options+Testing.m in Sources */ = {isa = PBXBuildFile; fileRef = AAF3344A1806A47E00928A00 /* Options+Testing.m */; };
 		C9D5B9891733CC2100011C1F /* ArchiveAction.m in Sources */ = {isa = PBXBuildFile; fileRef = C9D5B9881733CC2100011C1F /* ArchiveAction.m */; };
 		C9D5B98A1733CC2500011C1F /* ArchiveAction.m in Sources */ = {isa = PBXBuildFile; fileRef = C9D5B9881733CC2100011C1F /* ArchiveAction.m */; };
+		CC229B0F1946396600E11C30 /* SimulatorUtils.m in Sources */ = {isa = PBXBuildFile; fileRef = CC229B0E1946396600E11C30 /* SimulatorUtils.m */; };
+		CC229B1019463B2B00E11C30 /* SimulatorUtils.m in Sources */ = {isa = PBXBuildFile; fileRef = CC229B0E1946396600E11C30 /* SimulatorUtils.m */; };
+		CC2BE2111B7ADE8D008FBC50 /* PbxprojReader.m in Sources */ = {isa = PBXBuildFile; fileRef = CC2BE2101B7ADE8D008FBC50 /* PbxprojReader.m */; };
+		CC2BE23E1B7AE2AF008FBC50 /* PbxprojReader.m in Sources */ = {isa = PBXBuildFile; fileRef = CC2BE2101B7ADE8D008FBC50 /* PbxprojReader.m */; };
+		CC2BE33A1B7B1BE7008FBC50 /* PbxprojReaderTests.m in Sources */ = {isa = PBXBuildFile; fileRef = CC2BE3391B7B1BE7008FBC50 /* PbxprojReaderTests.m */; };
+		CC4AB1FB1B82C57F00543A42 /* TestableExecutionInfoTests.m in Sources */ = {isa = PBXBuildFile; fileRef = CC4AB1FA1B82C57F00543A42 /* TestableExecutionInfoTests.m */; };
+		CC84C94C18ECE161001F6094 /* FakeOCUnitTestRunner.m in Sources */ = {isa = PBXBuildFile; fileRef = CC84C94B18ECE161001F6094 /* FakeOCUnitTestRunner.m */; };
+		CCC55AD2195BCD7D0051A50B /* SimulatorWrapperXcode6.m in Sources */ = {isa = PBXBuildFile; fileRef = CCC55AD1195BCD7D0051A50B /* SimulatorWrapperXcode6.m */; };
+		CCC55AD6195BCDD90051A50B /* SimulatorWrapper.m in Sources */ = {isa = PBXBuildFile; fileRef = CCC55AD5195BCDD90051A50B /* SimulatorWrapper.m */; };
+		CCE14EA11ACB5B8100B76996 /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CCE14EA01ACB5B8100B76996 /* AppKit.framework */; };
+		CCE14EA21ACB5BB100B76996 /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CCE14EA01ACB5B8100B76996 /* AppKit.framework */; };
+		CCEB0F26195F2D9E00878E25 /* SimulatorInfo.m in Sources */ = {isa = PBXBuildFile; fileRef = CCF6EE48195BA918005BA335 /* SimulatorInfo.m */; };
+		CCEB0F28195F2D9E00878E25 /* SimulatorWrapper.m in Sources */ = {isa = PBXBuildFile; fileRef = CCC55AD5195BCDD90051A50B /* SimulatorWrapper.m */; };
+		CCEB0F29195F2D9E00878E25 /* SimulatorWrapperXcode6.m in Sources */ = {isa = PBXBuildFile; fileRef = CCC55AD1195BCD7D0051A50B /* SimulatorWrapperXcode6.m */; };
+		CCF6EE49195BA918005BA335 /* SimulatorInfo.m in Sources */ = {isa = PBXBuildFile; fileRef = CCF6EE48195BA918005BA335 /* SimulatorInfo.m */; };
+		CCF980331B38D1C900E4E0B0 /* XCTestConfigurationUnarchiver.m in Sources */ = {isa = PBXBuildFile; fileRef = CCF980321B38D1C900E4E0B0 /* XCTestConfigurationUnarchiver.m */; };
 		CD098A2A175EBD20002E0CAC /* AnalyzeAction.m in Sources */ = {isa = PBXBuildFile; fileRef = CD098A29175EBD20002E0CAC /* AnalyzeAction.m */; };
 		CD098A2B175EBD20002E0CAC /* AnalyzeAction.m in Sources */ = {isa = PBXBuildFile; fileRef = CD098A29175EBD20002E0CAC /* AnalyzeAction.m */; };
+		CD0CFBD81992E32C0028F69B /* TaskUtilTests.m in Sources */ = {isa = PBXBuildFile; fileRef = CD0CFBD71992E32C0028F69B /* TaskUtilTests.m */; };
 		CD522EC217471D6300048AF9 /* SchemeGenerator.m in Sources */ = {isa = PBXBuildFile; fileRef = CD522EC117471D6300048AF9 /* SchemeGenerator.m */; };
 		CD56770F1766782C003B727C /* BuildStateParser.mm in Sources */ = {isa = PBXBuildFile; fileRef = CD56770E1766782C003B727C /* BuildStateParser.mm */; };
 		CD5677101766782C003B727C /* BuildStateParser.mm in Sources */ = {isa = PBXBuildFile; fileRef = CD56770E1766782C003B727C /* BuildStateParser.mm */; };
@@ -197,12 +213,11 @@
 		283CCA4516C2EA3800F2E343 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		283CCA4816C2EA3800F2E343 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		283CCA4B16C2EA3800F2E343 /* xctool-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "xctool-Prefix.pch"; sourceTree = "<group>"; };
-		283CCA5916C2EA8B00F2E343 /* SenTestingKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SenTestingKit.framework; path = Library/Frameworks/SenTestingKit.framework; sourceTree = DEVELOPER_DIR; };
 		283CCA5B16C2EA8B00F2E343 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
 		283CCA5E16C2EA8B00F2E343 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
 		283CCA5F16C2EA8B00F2E343 /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = Library/Frameworks/CoreData.framework; sourceTree = SDKROOT; };
 		283CCA6016C2EA8B00F2E343 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
-		283CCAC216C2EE9900F2E343 /* xctool-tests.octest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "xctool-tests.octest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		283CCAC216C2EE9900F2E343 /* xctool-tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "xctool-tests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		283CCAC716C2EE9900F2E343 /* xctool-tests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "xctool-tests-Info.plist"; sourceTree = "<group>"; };
 		283CCAC916C2EE9900F2E343 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		283CCACC16C2EE9900F2E343 /* XCToolTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = XCToolTests.m; sourceTree = "<group>"; };
@@ -223,13 +238,10 @@
 		2878E7DC184EA4BC00FF4354 /* XcodeRequiredVersion.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = XcodeRequiredVersion.m; sourceTree = "<group>"; };
 		287A37DC16C711AE00319E81 /* LineReader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LineReader.h; sourceTree = "<group>"; };
 		287A37DD16C711AE00319E81 /* LineReader.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LineReader.m; sourceTree = "<group>"; };
-		287A37DF16C711E000319E81 /* SimulatorLauncher.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SimulatorLauncher.h; sourceTree = "<group>"; };
-		287A37E016C711E000319E81 /* SimulatorLauncher.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SimulatorLauncher.m; sourceTree = "<group>"; };
 		287BF04C16F1A6EB00590E06 /* XcodeSubjectInfoTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = XcodeSubjectInfoTests.m; sourceTree = "<group>"; };
 		287BF08216F1A97900590E06 /* XcodeSubjectInfo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = XcodeSubjectInfo.h; sourceTree = "<group>"; };
 		287BF08316F1A97900590E06 /* XcodeSubjectInfo.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = XcodeSubjectInfo.m; sourceTree = "<group>"; };
 		287E0DC417CD60B00088A264 /* xctool-tests.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = "xctool-tests.xcconfig"; sourceTree = "<group>"; };
-		28869AFB178CEA7600DED56A /* Initializer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Initializer.m; sourceTree = "<group>"; };
 		28897FBA173E4C73004BA024 /* FakeTaskManagerTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FakeTaskManagerTests.m; sourceTree = "<group>"; };
 		28897FCE173E6215004BA024 /* Swizzle.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Swizzle.h; sourceTree = "<group>"; };
 		28897FCF173E6215004BA024 /* Swizzle.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Swizzle.m; sourceTree = "<group>"; };
@@ -274,7 +286,6 @@
 		28E9B9D416C3275200A52E4D /* OCUnitIOSLogicTestRunner.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; lineEnding = 0; path = OCUnitIOSLogicTestRunner.m; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objc; };
 		28E9B9D516C3275200A52E4D /* OCUnitTestRunner.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OCUnitTestRunner.h; sourceTree = "<group>"; };
 		28E9B9D616C3275200A52E4D /* OCUnitTestRunner.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = OCUnitTestRunner.m; sourceTree = "<group>"; };
-		28E9B9DE16C3278D00A52E4D /* iPhoneSimulatorRemoteClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = iPhoneSimulatorRemoteClient.h; sourceTree = "<group>"; };
 		28EAB46017E29647005EB9CF /* NSConcreteTask.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NSConcreteTask.h; sourceTree = "<group>"; };
 		28F489F117973B6100068E00 /* FakeFileHandle.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FakeFileHandle.h; sourceTree = "<group>"; };
 		28F489F217973B6100068E00 /* FakeFileHandle.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FakeFileHandle.m; sourceTree = "<group>"; };
@@ -288,8 +299,14 @@
 		32707EE31725FE9500AF2F53 /* TestActionInternal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TestActionInternal.h; sourceTree = "<group>"; };
 		32A90C521725F05800C2349E /* TestAction.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TestAction.m; sourceTree = "<group>"; };
 		32A90C531725F05800C2349E /* TestAction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TestAction.h; sourceTree = "<group>"; };
+		32F66B5C1B0E5DFD00BDCA61 /* TestRunning.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TestRunning.h; sourceTree = "<group>"; };
 		3892D73F1811A5CC00E68652 /* EventGenerator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EventGenerator.h; sourceTree = "<group>"; };
 		3892D7401811A5CC00E68652 /* EventGenerator.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = EventGenerator.m; sourceTree = "<group>"; };
+		40623EBC190EA61B004FB374 /* InstallAction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InstallAction.h; sourceTree = "<group>"; };
+		40623EBD190EA61B004FB374 /* InstallAction.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = InstallAction.m; sourceTree = "<group>"; };
+		4DC218061B238A4F000C9AA6 /* ActionScripts.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ActionScripts.m; sourceTree = "<group>"; };
+		4DC218091B238AB2000C9AA6 /* ActionScripts.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ActionScripts.h; sourceTree = "<group>"; };
+		4DD0C6891B25E25E005FFF7F /* ActionScriptsTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ActionScriptsTests.m; sourceTree = "<group>"; };
 		AA194FD118091AE700F56AFC /* ContainsAssertionFailure.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ContainsAssertionFailure.h; sourceTree = "<group>"; };
 		AA318BEC17E9B7CA00BF159E /* XCTest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = XCTest.h; sourceTree = "<group>"; };
 		AA318BED17E9BA3500BF159E /* TestingFramework.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TestingFramework.h; sourceTree = "<group>"; };
@@ -311,8 +328,33 @@
 		AAF3344E1806A48A00928A00 /* OCUnitTestRunnerTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = OCUnitTestRunnerTests.m; sourceTree = "<group>"; };
 		C9D5B9871733CC2100011C1F /* ArchiveAction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ArchiveAction.h; sourceTree = "<group>"; };
 		C9D5B9881733CC2100011C1F /* ArchiveAction.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ArchiveAction.m; sourceTree = "<group>"; };
+		CC229B0D1946396600E11C30 /* SimulatorUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SimulatorUtils.h; path = xctool/SimulatorWrapper/SimulatorUtils.h; sourceTree = "<group>"; };
+		CC229B0E1946396600E11C30 /* SimulatorUtils.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = SimulatorUtils.m; path = xctool/SimulatorWrapper/SimulatorUtils.m; sourceTree = "<group>"; };
+		CC229B1219463D2D00E11C30 /* SimulatorWrapper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SimulatorWrapper.h; path = xctool/SimulatorWrapper/SimulatorWrapper.h; sourceTree = "<group>"; };
+		CC229B181946413400E11C30 /* SimulatorInfo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SimulatorInfo.h; path = xctool/SimulatorWrapper/SimulatorInfo.h; sourceTree = "<group>"; };
+		CC2BE20F1B7ADE8D008FBC50 /* PbxprojReader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PbxprojReader.h; sourceTree = "<group>"; };
+		CC2BE2101B7ADE8D008FBC50 /* PbxprojReader.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PbxprojReader.m; sourceTree = "<group>"; };
+		CC2BE3391B7B1BE7008FBC50 /* PbxprojReaderTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PbxprojReaderTests.m; sourceTree = "<group>"; };
+		CC4AB1FA1B82C57F00543A42 /* TestableExecutionInfoTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TestableExecutionInfoTests.m; sourceTree = "<group>"; };
+		CC84C94A18ECE161001F6094 /* FakeOCUnitTestRunner.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FakeOCUnitTestRunner.h; sourceTree = "<group>"; };
+		CC84C94B18ECE161001F6094 /* FakeOCUnitTestRunner.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FakeOCUnitTestRunner.m; sourceTree = "<group>"; };
+		CCC55AC0195BB1E80051A50B /* SimDevice.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SimDevice.h; sourceTree = "<group>"; };
+		CCC55AC3195BB1E80051A50B /* SimDeviceSet.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SimDeviceSet.h; sourceTree = "<group>"; };
+		CCC55AC4195BB1E80051A50B /* SimDeviceType.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SimDeviceType.h; sourceTree = "<group>"; };
+		CCC55AC5195BB1E80051A50B /* SimRuntime.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SimRuntime.h; sourceTree = "<group>"; };
+		CCC55AC9195BB1E80051A50B /* DTiPhoneSimulatorRemoteClient.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DTiPhoneSimulatorRemoteClient.h; sourceTree = "<group>"; };
+		CCC55AD1195BCD7D0051A50B /* SimulatorWrapperXcode6.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = SimulatorWrapperXcode6.m; path = xctool/SimulatorWrapper/SimulatorWrapperXcode6.m; sourceTree = "<group>"; };
+		CCC55AD4195BCDA30051A50B /* SimulatorWrapperXcode6.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SimulatorWrapperXcode6.h; path = xctool/SimulatorWrapper/SimulatorWrapperXcode6.h; sourceTree = "<group>"; };
+		CCC55AD5195BCDD90051A50B /* SimulatorWrapper.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = SimulatorWrapper.m; path = xctool/SimulatorWrapper/SimulatorWrapper.m; sourceTree = "<group>"; };
+		CCC647DD1B2F8F4C006609FC /* XCTestConfiguration.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = XCTestConfiguration.h; sourceTree = "<group>"; };
+		CCE14EA01ACB5B8100B76996 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
+		CCF50B5519DC9E8C00A1044E /* SimVerifier.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SimVerifier.h; sourceTree = "<group>"; };
+		CCF6EE48195BA918005BA335 /* SimulatorInfo.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = SimulatorInfo.m; path = xctool/SimulatorWrapper/SimulatorInfo.m; sourceTree = "<group>"; };
+		CCF980311B38D1C900E4E0B0 /* XCTestConfigurationUnarchiver.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = XCTestConfigurationUnarchiver.h; sourceTree = "<group>"; };
+		CCF980321B38D1C900E4E0B0 /* XCTestConfigurationUnarchiver.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = XCTestConfigurationUnarchiver.m; sourceTree = "<group>"; };
 		CD098A28175EBD20002E0CAC /* AnalyzeAction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AnalyzeAction.h; sourceTree = "<group>"; };
 		CD098A29175EBD20002E0CAC /* AnalyzeAction.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AnalyzeAction.m; sourceTree = "<group>"; };
+		CD0CFBD71992E32C0028F69B /* TaskUtilTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TaskUtilTests.m; sourceTree = "<group>"; };
 		CD522EC017471D6300048AF9 /* SchemeGenerator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SchemeGenerator.h; sourceTree = "<group>"; };
 		CD522EC117471D6300048AF9 /* SchemeGenerator.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SchemeGenerator.m; sourceTree = "<group>"; };
 		CD56770D1766782C003B727C /* BuildStateParser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BuildStateParser.h; sourceTree = "<group>"; };
@@ -340,6 +382,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CCE14EA21ACB5BB100B76996 /* AppKit.framework in Frameworks */,
 				28FFB00616FF5A2B000CCE2A /* QuartzCore.framework in Frameworks */,
 				283CCA4616C2EA3800F2E343 /* Foundation.framework in Frameworks */,
 			);
@@ -349,10 +392,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CCE14EA11ACB5B8100B76996 /* AppKit.framework in Frameworks */,
 				28FFB00516FF5A21000CCE2A /* QuartzCore.framework in Frameworks */,
 				28E9B98E16C2FE4800A52E4D /* OCHamcrest.framework in Frameworks */,
 				28E9B98B16C2FDA700A52E4D /* OCMockito.framework in Frameworks */,
-				283CCAC316C2EE9900F2E343 /* SenTestingKit.framework in Frameworks */,
 				283CCAC416C2EE9900F2E343 /* Cocoa.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -379,9 +422,12 @@
 				283479AC16E2A736003C3B77 /* BuildTestsAction.m */,
 				283479B316E2B39B003C3B77 /* RunTestsAction.h */,
 				283479B416E2B39B003C3B77 /* RunTestsAction.m */,
-				32A90C521725F05800C2349E /* TestAction.m */,
 				32A90C531725F05800C2349E /* TestAction.h */,
+				32A90C521725F05800C2349E /* TestAction.m */,
+				32F66B5C1B0E5DFD00BDCA61 /* TestRunning.h */,
 				32707EE31725FE9500AF2F53 /* TestActionInternal.h */,
+				40623EBC190EA61B004FB374 /* InstallAction.h */,
+				40623EBD190EA61B004FB374 /* InstallAction.m */,
 			);
 			name = Actions;
 			sourceTree = "<group>";
@@ -389,9 +435,10 @@
 		283CCA3916C2EA3700F2E343 = {
 			isa = PBXGroup;
 			children = (
-				28E9B9DD16C3278D00A52E4D /* iPhoneSimulatorRemoteClient */,
 				28E9B98316C2F2D900A52E4D /* xctool.xcconfig */,
 				287E0DC417CD60B00088A264 /* xctool-tests.xcconfig */,
+				CCC55ABE195BB1E80051A50B /* Headers */,
+				CC229B0C194638CC00E11C30 /* Simulator API */,
 				28897FCD173E6215004BA024 /* Common */,
 				283CCA4716C2EA3800F2E343 /* xctool */,
 				283CCAC516C2EE9900F2E343 /* xctool-tests */,
@@ -407,7 +454,7 @@
 			isa = PBXGroup;
 			children = (
 				283CCA4216C2EA3800F2E343 /* xctool */,
-				283CCAC216C2EE9900F2E343 /* xctool-tests.octest */,
+				283CCAC216C2EE9900F2E343 /* xctool-tests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -415,11 +462,11 @@
 		283CCA4416C2EA3800F2E343 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				CCE14EA01ACB5B8100B76996 /* AppKit.framework */,
 				28FFB00416FF5A21000CCE2A /* QuartzCore.framework */,
 				28E9B98D16C2FE4800A52E4D /* OCHamcrest.framework */,
 				28E9B98A16C2FDA700A52E4D /* OCMockito.framework */,
 				283CCA4516C2EA3800F2E343 /* Foundation.framework */,
-				283CCA5916C2EA8B00F2E343 /* SenTestingKit.framework */,
 				283CCA5B16C2EA8B00F2E343 /* Cocoa.framework */,
 				283CCA5D16C2EA8B00F2E343 /* Other Frameworks */,
 			);
@@ -430,6 +477,8 @@
 			isa = PBXGroup;
 			children = (
 				2834799516E199A9003C3B77 /* Actions */,
+				4DC218091B238AB2000C9AA6 /* ActionScripts.h */,
+				4DC218061B238A4F000C9AA6 /* ActionScripts.m */,
 				28BB043B17C7FF43004F6C13 /* Buildable.h */,
 				28BB043C17C7FF43004F6C13 /* Buildable.m */,
 				CD56770D1766782C003B727C /* BuildStateParser.h */,
@@ -449,14 +498,14 @@
 				EEB31CF817C6D57B00CFB0E1 /* OCTestSuiteEventState.m */,
 				AA3E57FA1812262B008B9644 /* OCUnitTestQueryRunner */,
 				AA3E57F91812261B008B9644 /* OCUnitTestRunner */,
+				CC2BE20F1B7ADE8D008FBC50 /* PbxprojReader.h */,
+				CC2BE2101B7ADE8D008FBC50 /* PbxprojReader.m */,
 				28E28FBA1797099E0072376C /* ReporterTask.h */,
 				28E28FBB1797099E0072376C /* ReporterTask.m */,
 				28E28FB61796926A0072376C /* ReportStatus.h */,
 				28E28FB71796926A0072376C /* ReportStatus.m */,
 				CD522EC017471D6300048AF9 /* SchemeGenerator.h */,
 				CD522EC117471D6300048AF9 /* SchemeGenerator.m */,
-				287A37DF16C711E000319E81 /* SimulatorLauncher.h */,
-				287A37E016C711E000319E81 /* SimulatorLauncher.m */,
 				283CCA4A16C2EA3800F2E343 /* Supporting Files */,
 				28ACFC8116FBA888004BAF33 /* TaskUtil.h */,
 				28ACFC8216FBA888004BAF33 /* TaskUtil.m */,
@@ -503,6 +552,7 @@
 		283CCAC516C2EE9900F2E343 /* xctool-tests */ = {
 			isa = PBXGroup;
 			children = (
+				4DD0C6891B25E25E005FFF7F /* ActionScriptsTests.m */,
 				28046D2F16D76665000AA15C /* ActionTests.m */,
 				28302E1D175A8B6900C997B2 /* ArchiveActionTests.m */,
 				28ADB43A16E410F9006301ED /* BuildActionTests.m */,
@@ -513,12 +563,13 @@
 				28BB33001811B61A006F699B /* ContainsArray.m */,
 				AA194FD118091AE700F56AFC /* ContainsAssertionFailure.h */,
 				28D9C5B01828D5CA0032FEA8 /* ContainsAssertionFailure.m */,
+				CC84C94A18ECE161001F6094 /* FakeOCUnitTestRunner.h */,
+				CC84C94B18ECE161001F6094 /* FakeOCUnitTestRunner.m */,
 				28E9B99016C3037E00A52E4D /* FakeTask.h */,
 				28E9B99116C3037E00A52E4D /* FakeTask.m */,
 				2889805E1742B675004BA024 /* FakeTaskManager.h */,
 				2889805F1742B675004BA024 /* FakeTaskManager.m */,
 				28897FBA173E4C73004BA024 /* FakeTaskManagerTests.m */,
-				28869AFB178CEA7600DED56A /* Initializer.m */,
 				AAF334451806A46F00928A00 /* LaunchHandlers.h */,
 				AAF334461806A46F00928A00 /* LaunchHandlers.m */,
 				EEB31CEC17C6867300CFB0E1 /* OCEventStateTests.m */,
@@ -530,6 +581,7 @@
 				28AC9E2F16DB3478009E5B9A /* OptionsTests.m */,
 				2804514417C410F100D16420 /* OTestQueryTests.m */,
 				AA6C88F61808C2C5006A3581 /* OTestShimTests.m */,
+				CC2BE3391B7B1BE7008FBC50 /* PbxprojReaderTests.m */,
 				28E28FBF1797193F0072376C /* ReporterTaskTests.m */,
 				28C81A62175562050072DDB8 /* ReportStatusTests.m */,
 				283479A416E1B242003C3B77 /* RunTestsActionTests.m */,
@@ -537,11 +589,15 @@
 				28A5A8EB1746D2AA001733A9 /* Swizzler.h */,
 				28A5A8EC1746D2AA001733A9 /* Swizzler.m */,
 				28A5A8EF1746D2B9001733A9 /* SwizzlerTests.m */,
+				CD0CFBD71992E32C0028F69B /* TaskUtilTests.m */,
+				CC4AB1FA1B82C57F00543A42 /* TestableExecutionInfoTests.m */,
 				32707EE11725FE7F00AF2F53 /* TestActionTests.m */,
 				AAF3344D1806A48A00928A00 /* TestRunStateTests.m */,
 				283479B716E3EBE5003C3B77 /* TestUtil.h */,
 				283479B816E3EBE5003C3B77 /* TestUtil.m */,
 				287BF04C16F1A6EB00590E06 /* XcodeSubjectInfoTests.m */,
+				CCF980311B38D1C900E4E0B0 /* XCTestConfigurationUnarchiver.h */,
+				CCF980321B38D1C900E4E0B0 /* XCTestConfigurationUnarchiver.m */,
 				283CCACC16C2EE9900F2E343 /* XCToolTests.m */,
 				2862C1B5180DE7BA00E5F58B /* XCToolUtilTests.m */,
 			);
@@ -581,14 +637,6 @@
 			path = ../Common;
 			sourceTree = "<group>";
 		};
-		28E9B9DD16C3278D00A52E4D /* iPhoneSimulatorRemoteClient */ = {
-			isa = PBXGroup;
-			children = (
-				28E9B9DE16C3278D00A52E4D /* iPhoneSimulatorRemoteClient.h */,
-			);
-			path = iPhoneSimulatorRemoteClient;
-			sourceTree = "<group>";
-		};
 		AA3E57F91812261B008B9644 /* OCUnitTestRunner */ = {
 			isa = PBXGroup;
 			children = (
@@ -626,6 +674,91 @@
 			name = OCUnitTestQueryRunner;
 			sourceTree = "<group>";
 		};
+		CC229B0C194638CC00E11C30 /* Simulator API */ = {
+			isa = PBXGroup;
+			children = (
+				CCF6EE4A195BA9DC005BA335 /* SimulatorInfo */,
+				CCDC41BF195BDE3300BD5A1A /* SimulatorUtils */,
+				CCC55ACE195BCD370051A50B /* SimulatorWrapper */,
+			);
+			name = "Simulator API";
+			sourceTree = "<group>";
+		};
+		CCC55ABE195BB1E80051A50B /* Headers */ = {
+			isa = PBXGroup;
+			children = (
+				CCC55ABF195BB1E80051A50B /* CoreSimulator */,
+				CCC55AC8195BB1E80051A50B /* iPhoneSimulatorRemoteClient */,
+				CCC647DC1B2F8F4C006609FC /* XCTest */,
+			);
+			path = Headers;
+			sourceTree = "<group>";
+		};
+		CCC55ABF195BB1E80051A50B /* CoreSimulator */ = {
+			isa = PBXGroup;
+			children = (
+				CCC55AC0195BB1E80051A50B /* SimDevice.h */,
+				CCC55AC3195BB1E80051A50B /* SimDeviceSet.h */,
+				CCC55AC4195BB1E80051A50B /* SimDeviceType.h */,
+				CCC55AC5195BB1E80051A50B /* SimRuntime.h */,
+				CCF50B5519DC9E8C00A1044E /* SimVerifier.h */,
+			);
+			path = CoreSimulator;
+			sourceTree = "<group>";
+		};
+		CCC55AC8195BB1E80051A50B /* iPhoneSimulatorRemoteClient */ = {
+			isa = PBXGroup;
+			children = (
+				CCC55AC9195BB1E80051A50B /* DTiPhoneSimulatorRemoteClient.h */,
+			);
+			path = iPhoneSimulatorRemoteClient;
+			sourceTree = "<group>";
+		};
+		CCC55ACE195BCD370051A50B /* SimulatorWrapper */ = {
+			isa = PBXGroup;
+			children = (
+				CC229B1219463D2D00E11C30 /* SimulatorWrapper.h */,
+				CCC55AD5195BCDD90051A50B /* SimulatorWrapper.m */,
+				CCC55AD0195BCD550051A50B /* Xcode 6 */,
+			);
+			name = SimulatorWrapper;
+			sourceTree = "<group>";
+		};
+		CCC55AD0195BCD550051A50B /* Xcode 6 */ = {
+			isa = PBXGroup;
+			children = (
+				CCC55AD4195BCDA30051A50B /* SimulatorWrapperXcode6.h */,
+				CCC55AD1195BCD7D0051A50B /* SimulatorWrapperXcode6.m */,
+			);
+			name = "Xcode 6";
+			sourceTree = "<group>";
+		};
+		CCC647DC1B2F8F4C006609FC /* XCTest */ = {
+			isa = PBXGroup;
+			children = (
+				CCC647DD1B2F8F4C006609FC /* XCTestConfiguration.h */,
+			);
+			path = XCTest;
+			sourceTree = "<group>";
+		};
+		CCDC41BF195BDE3300BD5A1A /* SimulatorUtils */ = {
+			isa = PBXGroup;
+			children = (
+				CC229B0D1946396600E11C30 /* SimulatorUtils.h */,
+				CC229B0E1946396600E11C30 /* SimulatorUtils.m */,
+			);
+			name = SimulatorUtils;
+			sourceTree = "<group>";
+		};
+		CCF6EE4A195BA9DC005BA335 /* SimulatorInfo */ = {
+			isa = PBXGroup;
+			children = (
+				CC229B181946413400E11C30 /* SimulatorInfo.h */,
+				CCF6EE48195BA918005BA335 /* SimulatorInfo.m */,
+			);
+			name = SimulatorInfo;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -661,8 +794,8 @@
 			);
 			name = "xctool-tests";
 			productName = "xctool-tests";
-			productReference = 283CCAC216C2EE9900F2E343 /* xctool-tests.octest */;
-			productType = "com.apple.product-type.bundle";
+			productReference = 283CCAC216C2EE9900F2E343 /* xctool-tests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
@@ -670,7 +803,8 @@
 		283CCA3A16C2EA3700F2E343 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0500;
+				LastTestingUpgradeCheck = 0700;
+				LastUpgradeCheck = 0700;
 				ORGANIZATIONNAME = "Facebook, Inc.";
 			};
 			buildConfigurationList = 283CCA3D16C2EA3700F2E343 /* Build configuration list for PBXProject "xctool" */;
@@ -697,8 +831,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				283CCACA16C2EE9900F2E343 /* InfoPlist.strings in Resources */,
-				28E9B98416C2F2D900A52E4D /* xctool.xcconfig in Resources */,
-				287E0DC517CD60B00088A264 /* xctool-tests.xcconfig in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -721,7 +853,6 @@
 				28E9B9DB16C3275200A52E4D /* OCUnitTestRunner.m in Sources */,
 				287A37DE16C711AF00319E81 /* LineReader.m in Sources */,
 				AAC1E0B51811F5E3005A4FD5 /* OCUnitOSXLogicTestQueryRunner.m in Sources */,
-				287A37E116C711E000319E81 /* SimulatorLauncher.m in Sources */,
 				28046D2C16D7603B000AA15C /* Action.m in Sources */,
 				2834799416E199A2003C3B77 /* BuildAction.m in Sources */,
 				285E35D918456BAA009E9BFD /* XcodeBuildSettings.m in Sources */,
@@ -731,14 +862,17 @@
 				AAC1E0B11811F5C3005A4FD5 /* OCUnitTestQueryRunner.m in Sources */,
 				283479B516E2B39C003C3B77 /* RunTestsAction.m in Sources */,
 				286607711834757F000ACB87 /* OCUnitOSXAppTestQueryRunner.m in Sources */,
+				CCC55AD6195BCDD90051A50B /* SimulatorWrapper.m in Sources */,
 				28BB043D17C7FF43004F6C13 /* Buildable.m in Sources */,
 				287BF08416F1A97900590E06 /* XcodeSubjectInfo.m in Sources */,
+				CC229B0F1946396600E11C30 /* SimulatorUtils.m in Sources */,
 				28ACFC8316FBA888004BAF33 /* TaskUtil.m in Sources */,
 				AAC1E0C118121AC6005A4FD5 /* OCUnitIOSAppTestQueryRunner.m in Sources */,
 				3892D7411811A5CC00E68652 /* EventGenerator.m in Sources */,
 				288B9FB8171A50C1008F0BDF /* OCUnitOSXLogicTestRunner.m in Sources */,
 				288B9FBC171A5509008F0BDF /* OCUnitOSXAppTestRunner.m in Sources */,
 				324BB4C51725BD990073A862 /* XcodeTargetMatch.m in Sources */,
+				CCF6EE49195BA918005BA335 /* SimulatorInfo.m in Sources */,
 				32A90C541725F05800C2349E /* TestAction.m in Sources */,
 				2864A3FA1734E52800BBF3B1 /* Version.m in Sources */,
 				C9D5B9891733CC2100011C1F /* ArchiveAction.m in Sources */,
@@ -748,14 +882,18 @@
 				28B714551760767D00BB016A /* OCUnitIOSDeviceTestRunner.m in Sources */,
 				CD098A2A175EBD20002E0CAC /* AnalyzeAction.m in Sources */,
 				CD56770F1766782C003B727C /* BuildStateParser.mm in Sources */,
+				CCC55AD2195BCD7D0051A50B /* SimulatorWrapperXcode6.m in Sources */,
 				28E28FB81796926A0072376C /* ReportStatus.m in Sources */,
+				CC2BE2111B7ADE8D008FBC50 /* PbxprojReader.m in Sources */,
 				28E28FBC1797099E0072376C /* ReporterTask.m in Sources */,
 				28F489FC17973BF900068E00 /* NSFileHandle+Print.m in Sources */,
 				28404ADF17C7E16F00CB436A /* Testable.m in Sources */,
 				2869F3C517C82FB80078F078 /* TestableExecutionInfo.m in Sources */,
 				EEB31CEA17C685E500CFB0E1 /* OCEventState.m in Sources */,
 				EEB31CF117C6A1EF00CFB0E1 /* OCTestEventState.m in Sources */,
+				4DC218071B238A4F000C9AA6 /* ActionScripts.m in Sources */,
 				AAC1E0BD18121071005A4FD5 /* OCUnitIOSLogicTestQueryRunner.m in Sources */,
+				40623EBE190EA61B004FB374 /* InstallAction.m in Sources */,
 				EEB31CF917C6D57B00CFB0E1 /* OCTestSuiteEventState.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -764,6 +902,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CC2BE23E1B7AE2AF008FBC50 /* PbxprojReader.m in Sources */,
+				CCEB0F26195F2D9E00878E25 /* SimulatorInfo.m in Sources */,
+				CCEB0F28195F2D9E00878E25 /* SimulatorWrapper.m in Sources */,
+				CCEB0F29195F2D9E00878E25 /* SimulatorWrapperXcode6.m in Sources */,
+				CC229B1019463B2B00E11C30 /* SimulatorUtils.m in Sources */,
 				2878E7DE184EA4BC00FF4354 /* XcodeRequiredVersion.m in Sources */,
 				EE37291617E28A3000554867 /* TestRunState.m in Sources */,
 				AAF334531806A4A400928A00 /* Options+Testing.m in Sources */,
@@ -783,9 +926,9 @@
 				28E9B98016C2F1C600A52E4D /* XCToolUtil.m in Sources */,
 				28E9B99216C3037E00A52E4D /* FakeTask.m in Sources */,
 				28E9B9D816C3275200A52E4D /* OCUnitIOSAppTestRunner.m in Sources */,
+				CCF980331B38D1C900E4E0B0 /* XCTestConfigurationUnarchiver.m in Sources */,
 				28E9B9DA16C3275200A52E4D /* OCUnitIOSLogicTestRunner.m in Sources */,
 				28E9B9DC16C3275200A52E4D /* OCUnitTestRunner.m in Sources */,
-				287A37E216C711E000319E81 /* SimulatorLauncher.m in Sources */,
 				28046D2D16D7603B000AA15C /* Action.m in Sources */,
 				2862C1B6180DE7BA00E5F58B /* XCToolUtilTests.m in Sources */,
 				AAC1E0C218121AC6005A4FD5 /* OCUnitIOSAppTestQueryRunner.m in Sources */,
@@ -804,7 +947,9 @@
 				28ADB43B16E410F9006301ED /* BuildActionTests.m in Sources */,
 				287BF04D16F1A6EB00590E06 /* XcodeSubjectInfoTests.m in Sources */,
 				287BF08516F1A97900590E06 /* XcodeSubjectInfo.m in Sources */,
+				4DD0C68A1B25E25E005FFF7F /* ActionScriptsTests.m in Sources */,
 				28ACFC8416FBA888004BAF33 /* TaskUtil.m in Sources */,
+				CC2BE33A1B7B1BE7008FBC50 /* PbxprojReaderTests.m in Sources */,
 				288B9FB9171A50C1008F0BDF /* OCUnitOSXLogicTestRunner.m in Sources */,
 				288B9FBD171A5509008F0BDF /* OCUnitOSXAppTestRunner.m in Sources */,
 				324BB4C61725BDA20073A862 /* XcodeTargetMatch.m in Sources */,
@@ -822,18 +967,22 @@
 				AAF334481806A46F00928A00 /* LaunchHandlers.m in Sources */,
 				CDD81F52174EAFDC00F42111 /* EventBuffer.m in Sources */,
 				AAC1E0BE18121071005A4FD5 /* OCUnitIOSLogicTestQueryRunner.m in Sources */,
+				CC4AB1FB1B82C57F00543A42 /* TestableExecutionInfoTests.m in Sources */,
 				28C81A63175562050072DDB8 /* ReportStatusTests.m in Sources */,
 				28302E1E175A8B6900C997B2 /* ArchiveActionTests.m in Sources */,
+				4DC2180A1B238AD3000C9AA6 /* ActionScripts.m in Sources */,
 				AA318BF017E9BA3500BF159E /* TestingFramework.m in Sources */,
 				CD098A2B175EBD20002E0CAC /* AnalyzeAction.m in Sources */,
 				CD5677101766782C003B727C /* BuildStateParser.mm in Sources */,
 				28BB043E17C7FF43004F6C13 /* Buildable.m in Sources */,
 				CDEE9EA1176950DC0026D278 /* BuildStateParserTests.m in Sources */,
-				28869AFC178CEA7600DED56A /* Initializer.m in Sources */,
+				40623EBF190EA61B004FB374 /* InstallAction.m in Sources */,
 				AAF334521806A48A00928A00 /* OCUnitTestRunnerTests.m in Sources */,
+				CC84C94C18ECE161001F6094 /* FakeOCUnitTestRunner.m in Sources */,
 				28E28FBD1797099E0072376C /* ReporterTask.m in Sources */,
 				28E28FC01797193F0072376C /* ReporterTaskTests.m in Sources */,
 				28F489F317973B6100068E00 /* FakeFileHandle.m in Sources */,
+				CD0CFBD81992E32C0028F69B /* TaskUtilTests.m in Sources */,
 				AAC1E0B61811F5E3005A4FD5 /* OCUnitOSXLogicTestQueryRunner.m in Sources */,
 				28F489FD17973BF900068E00 /* NSFileHandle+Print.m in Sources */,
 				2804514517C410F100D16420 /* OTestQueryTests.m in Sources */,
@@ -866,7 +1015,6 @@
 			baseConfigurationReference = 28E9B98316C2F2D900A52E4D /* xctool.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
@@ -898,7 +1046,6 @@
 			baseConfigurationReference = 28E9B98316C2F2D900A52E4D /* xctool.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
@@ -943,12 +1090,12 @@
 				FRAMEWORK_SEARCH_PATHS = (
 					"\"$(DEVELOPER_LIBRARY_DIR)/Frameworks\"",
 					"\"$(SRCROOT)/../Vendor\"",
+					"$(inherited)",
 				);
 				GCC_PREFIX_HEADER = "xctool-tests/xctool-tests-Prefix.pch";
 				INFOPLIST_FILE = "xctool-tests/xctool-tests-Info.plist";
 				PRODUCT_NAME = "xctool-tests";
 				SKIP_INSTALL = YES;
-				WRAPPER_EXTENSION = octest;
 			};
 			name = Debug;
 		};
@@ -960,12 +1107,12 @@
 				FRAMEWORK_SEARCH_PATHS = (
 					"\"$(DEVELOPER_LIBRARY_DIR)/Frameworks\"",
 					"\"$(SRCROOT)/../Vendor\"",
+					"$(inherited)",
 				);
 				GCC_PREFIX_HEADER = "xctool-tests/xctool-tests-Prefix.pch";
 				INFOPLIST_FILE = "xctool-tests/xctool-tests-Info.plist";
 				PRODUCT_NAME = "xctool-tests";
 				SKIP_INSTALL = YES;
-				WRAPPER_EXTENSION = octest;
 			};
 			name = Release;
 		};

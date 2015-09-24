@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,13 +14,13 @@
 // limitations under the License.
 //
 
-#import <SenTestingKit/SenTestingKit.h>
+#import <XCTest/XCTest.h>
 
 #import "FakeFileHandle.h"
 #import "ReporterTask.h"
 #import "XCToolUtil.h"
 
-@interface ReporterTaskTests : SenTestCase
+@interface ReporterTaskTests : XCTestCase
 @end
 
 @implementation ReporterTaskTests
@@ -29,13 +29,13 @@
 {
   NSString *fakeStandardOutputPath = MakeTempFileWithPrefix(@"fake-stdout");
 
-  ReporterTask *rt = [[[ReporterTask alloc] initWithReporterPath:@"/bin/cat"
-                                                      outputPath:@"-"] autorelease];
+  ReporterTask *rt = [[ReporterTask alloc] initWithReporterPath:@"/bin/cat"
+                                                      outputPath:@"-"];
   NSString *error = nil;
   BOOL opened = [rt openWithStandardOutput:[NSFileHandle fileHandleForWritingAtPath:fakeStandardOutputPath]
                              standardError:[NSFileHandle fileHandleWithStandardError]
                                      error:&error];
-  assertThatBool(opened, equalToBool(YES));
+  assertThatBool(opened, isTrue());
 
   PublishEventToReporters(@[rt], @{@"event":@"some-fake-event"});
 
@@ -52,13 +52,13 @@
   NSString *fakeStandardOutputPath = MakeTempFileWithPrefix(@"fake-stdout");
   NSString *someOutputPath = MakeTempFileWithPrefix(@"some-output");
 
-  ReporterTask *rt = [[[ReporterTask alloc] initWithReporterPath:@"/bin/cat"
-                                                      outputPath:someOutputPath] autorelease];
+  ReporterTask *rt = [[ReporterTask alloc] initWithReporterPath:@"/bin/cat"
+                                                      outputPath:someOutputPath];
   NSString *error = nil;
   BOOL opened = [rt openWithStandardOutput:[NSFileHandle fileHandleForWritingAtPath:fakeStandardOutputPath]
                              standardError:[NSFileHandle fileHandleWithStandardError]
                                      error:&error];
-  assertThatBool(opened, equalToBool(YES));
+  assertThatBool(opened, isTrue());
 
   PublishEventToReporters(@[rt], @{@"event":@"some-fake-event"});
 

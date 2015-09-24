@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
 //
 
 #import <Foundation/Foundation.h>
+
+@class NSConcreteTask, SimulatorInfo;
 
 /**
  * Launchs a task, waits for exit, and returns a dictionary like
@@ -67,8 +69,15 @@ void LaunchTaskAndMaybeLogCommand(NSTask *task, NSString *description);
  * Returns an NSTask that will launch an iOS simulator binary via the
  * iPhoneSimulator.platform/usr/bin/sim launcher.
  */
-NSTask *CreateTaskForSimulatorExecutable(cpu_type_t cpuType,
-                                         NSString *sdkVersion,
+NSTask *CreateTaskForSimulatorExecutable(NSString *sdkName,
+                                         SimulatorInfo *simulatorInfo,
                                          NSString *launchPath,
                                          NSArray *arguments,
                                          NSDictionary *environment);
+
+
+/**
+ * Returns a command-line expression which includes the environment, launch
+ * path, and args to reproduce a given task.
+ */
+NSString *CommandLineEquivalentForTask(NSConcreteTask *task);

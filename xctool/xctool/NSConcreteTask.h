@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@
 - (id)preferredArchitectures;
 
 /**
- * When YES (default), a new progress group is created for the child (via 
+ * When YES (default), a new progress group is created for the child (via
  * POSIX_SPAWN_SETPGROUP to posix_spawnattr_setflags).  If YES, then the child
  * will continue running even if the parent is killed or interrupted.
  */

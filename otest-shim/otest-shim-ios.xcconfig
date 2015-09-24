@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,10 +14,6 @@
 // limitations under the License.
 //
 
-#include "../Configurations/Project.xcconfig"
+#include "otest-shim.xcconfig"
 
-#include "../Configurations/Install.xcconfig"
-XT_INSTALL_DIR = lib
-
-LD = $(PROJECT_DIR)/../Vendor/clang-as-ios-dylib/links/ld-iphonesimulator-latest-targeting-5.0
-CC = $(PROJECT_DIR)/../Vendor/clang-as-ios-dylib/links/cc-iphonesimulator-latest-targeting-5.0
+#include "../Configurations/iOS.xcconfig"

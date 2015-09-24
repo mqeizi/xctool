@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,15 +14,15 @@
 // limitations under the License.
 //
 
-#import <SenTestingKit/SenTestingKit.h>
+#import <XCTest/XCTest.h>
 
 #import "Action.h"
 #import "BuildTestsAction.h"
 #import "FakeTask.h"
 #import "FakeTaskManager.h"
 #import "LaunchHandlers.h"
-#import "Options.h"
 #import "Options+Testing.h"
+#import "Options.h"
 #import "SchemeGenerator.h"
 #import "Swizzler.h"
 #import "TaskUtil.h"
@@ -38,7 +38,7 @@ static NSString *kTestWorkspaceTestProjectLibraryTestsTargetID  = @"28A33CE016CF
 static NSString *kTestWorkspaceTestProjectLibraryTests2TargetID = @"28ADB42416E40E23006301ED";
 static NSString *kTestWorkspaceTestProjectOtherLibTargetID      = @"28ADB45F16E42E9A006301ED";
 
-@interface BuildTestsActionTests : SenTestCase
+@interface BuildTestsActionTests : XCTestCase
 @end
 
 @implementation BuildTestsActionTests
@@ -46,6 +46,23 @@ static NSString *kTestWorkspaceTestProjectOtherLibTargetID      = @"28ADB45F16E4
 - (void)setUp
 {
   [super setUp];
+}
+
+- (void)testOnlyListAndOmitListCannotBothBeSpecified
+{
+  [[Options optionsFrom:@[
+    @"-project", TEST_DATA @"TestProject-Library/TestProject-Library.xcodeproj",
+    @"-scheme", @"TestProject-Library",
+    @"-sdk", @"iphonesimulator6.1",
+    @"build-tests",
+    @"-only", @"TestProject-LibraryTests",
+    @"-omit", @"TestProject-LibraryTests",
+    ]]
+   assertOptionsFailToValidateWithError:
+   @"build-tests: -only and -omit cannot both be specified."
+   withBuildSettingsFromFile:
+   TEST_DATA @"TestProject-Library-TestProject-Library-showBuildSettings.txt"
+   ];
 }
 
 - (void)testOnlyListIsCollected
@@ -62,6 +79,19 @@ static NSString *kTestWorkspaceTestProjectOtherLibTargetID      = @"28ADB45F16E4
   assertThat((action.onlyList), equalTo(@[@"TestProject-LibraryTests"]));
 }
 
+- (void)testOmitListIsCollected
+{
+  Options *options = [[Options optionsFrom:@[
+                       @"-project", TEST_DATA @"TestProject-Library/TestProject-Library.xcodeproj",
+                       @"-scheme", @"TestProject-Library",
+                       @"-sdk", @"iphonesimulator6.1",
+                       @"build-tests", @"-omit", @"TestProject-LibraryTests",
+                       ]] assertOptionsValidateWithBuildSettingsFromFile:
+                      TEST_DATA @"TestProject-Library-TestProject-Library-showBuildSettings.txt"
+                      ];
+  BuildTestsAction *action = options.actions[0];
+  assertThat((action.omitList), equalTo(@[@"TestProject-LibraryTests"]));
+}
 
 - (void)testSkipDependenciesIsCollected
 {
@@ -75,7 +105,7 @@ static NSString *kTestWorkspaceTestProjectOtherLibTargetID      = @"28ADB45F16E4
                       TEST_DATA @"TestProject-Library-TestProject-Library-showBuildSettings.txt"
                       ];
   BuildTestsAction *action = options.actions[0];
-  assertThatBool(action.skipDependencies, equalToBool(YES));
+  assertThatBool(action.skipDependencies, isTrue());
 }
 
 - (void)testOnlyListRequiresValidTarget
@@ -96,9 +126,11 @@ static NSString *kTestWorkspaceTestProjectOtherLibTargetID      = @"28ADB45F16E4
 - (void)testBuildTestsAction
 {
   [[FakeTaskManager sharedManager] runBlockWithFakeTasks:^{
+    NSString *projectPath = TEST_DATA @"TestProject-Library/TestProject-Library.xcodeproj";
+
     [[FakeTaskManager sharedManager] addLaunchHandlerBlocks:@[
      // Make sure -showBuildSettings returns some data
-     [LaunchHandlers handlerForShowBuildSettingsWithProject:TEST_DATA @"TestProject-Library/TestProject-Library.xcodeproj"
+     [LaunchHandlers handlerForShowBuildSettingsWithProject:projectPath
                                                      scheme:@"TestProject-Library"
                                                settingsPath:TEST_DATA @"TestProject-Library-showBuildSettings.txt"],
      ]];
@@ -108,14 +140,15 @@ static NSString *kTestWorkspaceTestProjectOtherLibTargetID      = @"28ADB45F16E4
     [given([mockSchemeGenerator writeWorkspaceNamed:@"Tests"])
      willReturn:mockWorkspacePath];
 
-    XCTool *tool = [[[XCTool alloc] init] autorelease];
+    XCTool *tool = [[XCTool alloc] init];
 
     tool.arguments = @[
-                       @"-project", TEST_DATA @"TestProject-Library/TestProject-Library.xcodeproj",
+                       @"-project", projectPath,
                        @"-scheme", @"TestProject-Library",
                        @"-configuration", @"Debug",
                        @"-sdk", @"iphonesimulator6.0",
-                       @"build-tests"
+                       @"build-tests",
+                       @"-reporter", @"plain",
                        ];
 
     [Swizzler whileSwizzlingSelector:@selector(schemeGenerator)
@@ -132,15 +165,13 @@ static NSString *kTestWorkspaceTestProjectOtherLibTargetID      = @"28ADB45F16E4
                        @"PLATFORM_NAME=iphonesimulator",
                        @"-workspace", mockWorkspacePath,
                        @"-scheme", @"Tests",
-                       @"OBJROOT=/Users/fpotter/Library/Developer/Xcode/DerivedData/TestProject-Library-amxcwsnetnrvhrdeikqmcczcgmwn/Build/Intermediates",
-                       @"SYMROOT=/Users/fpotter/Library/Developer/Xcode/DerivedData/TestProject-Library-amxcwsnetnrvhrdeikqmcczcgmwn/Build/Products",
-                       @"SHARED_PRECOMPS_DIR=/Users/fpotter/Library/Developer/Xcode/DerivedData/TestProject-Library-amxcwsnetnrvhrdeikqmcczcgmwn/Build/Intermediates/PrecompiledHeaders",
-                       [NSString stringWithFormat:@"-IDECustomDerivedDataLocation=%@xctool_temp_UNDERTEST/DerivedData", NSTemporaryDirectory()],
+                       @"OBJROOT=/Users/nekto/Library/Developer/Xcode/DerivedData/TestProject-Library-frruszglismbfoceinskphldzhci/Build/Intermediates",
+                       @"SYMROOT=/Users/nekto/Library/Developer/Xcode/DerivedData/TestProject-Library-frruszglismbfoceinskphldzhci/Build/Products",
+                       @"SHARED_PRECOMPS_DIR=/Users/nekto/Library/Developer/Xcode/DerivedData/TestProject-Library-frruszglismbfoceinskphldzhci/Build/Intermediates/PrecompiledHeaders",
+                       [NSString stringWithFormat:@"-IDECustomDerivedDataLocation=%@xctool_temp_UNDERTEST_%d/DerivedData", NSTemporaryDirectory(), [[NSProcessInfo processInfo] processIdentifier]],
                        @"build",
                        ]));
     assertThatInt(tool.exitStatus, equalToInt(0));
-
-    NSString *projectPath = TEST_DATA @"TestProject-Library/TestProject-Library.xcodeproj";
 
     [verify(mockSchemeGenerator) setParallelizeBuildables:YES];
     [verify(mockSchemeGenerator) setBuildImplicitDependencies:YES];
@@ -168,14 +199,15 @@ static NSString *kTestWorkspaceTestProjectOtherLibTargetID      = @"28ADB45F16E4
     [given([mockSchemeGenerator writeWorkspaceNamed:@"Tests"])
      willReturn:mockWorkspacePath];
 
-    XCTool *tool = [[[XCTool alloc] init] autorelease];
+    XCTool *tool = [[XCTool alloc] init];
 
     tool.arguments = @[
                        @"-workspace", TEST_DATA @"TestWorkspace-Library/TestWorkspace-Library.xcworkspace",
                        @"-scheme", @"TestProject-Library",
                        @"-configuration", @"Debug",
                        @"-sdk", @"iphonesimulator6.0",
-                       @"build-tests"
+                       @"build-tests",
+                       @"-reporter", @"plain",
                        ];
 
     [Swizzler whileSwizzlingSelector:@selector(schemeGenerator)
@@ -192,10 +224,10 @@ static NSString *kTestWorkspaceTestProjectOtherLibTargetID      = @"28ADB45F16E4
                        @"PLATFORM_NAME=iphonesimulator",
                        @"-workspace", mockWorkspacePath,
                        @"-scheme", @"Tests",
-                       @"OBJROOT=/Users/fpotter/Library/Developer/Xcode/DerivedData/TestWorkspace-Library-gjpyghvhqizojqckzrwwumrsqgoo/Build/Intermediates",
-                       @"SYMROOT=/Users/fpotter/Library/Developer/Xcode/DerivedData/TestWorkspace-Library-gjpyghvhqizojqckzrwwumrsqgoo/Build/Products",
-                       @"SHARED_PRECOMPS_DIR=/Users/fpotter/Library/Developer/Xcode/DerivedData/TestWorkspace-Library-gjpyghvhqizojqckzrwwumrsqgoo/Build/Intermediates/PrecompiledHeaders",
-                       [NSString stringWithFormat:@"-IDECustomDerivedDataLocation=%@xctool_temp_UNDERTEST/DerivedData", NSTemporaryDirectory()],
+                       @"OBJROOT=/Users/nekto/Library/Developer/Xcode/DerivedData/TestWorkspace-Library-asazjpviwiufbaajaofbmyqmmghn/Build/Intermediates",
+                       @"SYMROOT=/Users/nekto/Library/Developer/Xcode/DerivedData/TestWorkspace-Library-asazjpviwiufbaajaofbmyqmmghn/Build/Products",
+                       @"SHARED_PRECOMPS_DIR=/Users/nekto/Library/Developer/Xcode/DerivedData/TestWorkspace-Library-asazjpviwiufbaajaofbmyqmmghn/Build/Intermediates/PrecompiledHeaders",
+                       [NSString stringWithFormat:@"-IDECustomDerivedDataLocation=%@xctool_temp_UNDERTEST_%d/DerivedData", NSTemporaryDirectory(), [[NSProcessInfo processInfo] processIdentifier]],
                        @"build",
                        ]));
     assertThatInt(tool.exitStatus, equalToInt(0));
@@ -236,14 +268,15 @@ static NSString *kTestWorkspaceTestProjectOtherLibTargetID      = @"28ADB45F16E4
     [given([mockSchemeGenerator writeWorkspaceNamed:@"Tests"])
      willReturn:mockWorkspacePath];
 
-    XCTool *tool = [[[XCTool alloc] init] autorelease];
+    XCTool *tool = [[XCTool alloc] init];
 
     tool.arguments = @[
                        @"-workspace", TEST_DATA @"TestWorkspace-Library/TestWorkspace-Library.xcworkspace",
                        @"-scheme", @"TestProject-Library",
                        @"-configuration", @"Debug",
                        @"-sdk", @"iphonesimulator6.0",
-                       @"build-tests", @"-only", @"TestProject-LibraryTests"
+                       @"build-tests", @"-only", @"TestProject-LibraryTests",
+                       @"-reporter", @"plain",
                        ];
 
     [Swizzler whileSwizzlingSelector:@selector(schemeGenerator)
@@ -260,10 +293,10 @@ static NSString *kTestWorkspaceTestProjectOtherLibTargetID      = @"28ADB45F16E4
                        @"PLATFORM_NAME=iphonesimulator",
                        @"-workspace", mockWorkspacePath,
                        @"-scheme", @"Tests",
-                       @"OBJROOT=/Users/fpotter/Library/Developer/Xcode/DerivedData/TestWorkspace-Library-gjpyghvhqizojqckzrwwumrsqgoo/Build/Intermediates",
-                       @"SYMROOT=/Users/fpotter/Library/Developer/Xcode/DerivedData/TestWorkspace-Library-gjpyghvhqizojqckzrwwumrsqgoo/Build/Products",
-                       @"SHARED_PRECOMPS_DIR=/Users/fpotter/Library/Developer/Xcode/DerivedData/TestWorkspace-Library-gjpyghvhqizojqckzrwwumrsqgoo/Build/Intermediates/PrecompiledHeaders",
-                       [NSString stringWithFormat:@"-IDECustomDerivedDataLocation=%@xctool_temp_UNDERTEST/DerivedData", NSTemporaryDirectory()],
+                       @"OBJROOT=/Users/nekto/Library/Developer/Xcode/DerivedData/TestWorkspace-Library-asazjpviwiufbaajaofbmyqmmghn/Build/Intermediates",
+                       @"SYMROOT=/Users/nekto/Library/Developer/Xcode/DerivedData/TestWorkspace-Library-asazjpviwiufbaajaofbmyqmmghn/Build/Products",
+                       @"SHARED_PRECOMPS_DIR=/Users/nekto/Library/Developer/Xcode/DerivedData/TestWorkspace-Library-asazjpviwiufbaajaofbmyqmmghn/Build/Intermediates/PrecompiledHeaders",
+                       [NSString stringWithFormat:@"-IDECustomDerivedDataLocation=%@xctool_temp_UNDERTEST_%d/DerivedData", NSTemporaryDirectory(), [[NSProcessInfo processInfo] processIdentifier]],
                        @"build",
                        ]));
     assertThatInt(tool.exitStatus, equalToInt(0));
@@ -299,7 +332,7 @@ static NSString *kTestWorkspaceTestProjectOtherLibTargetID      = @"28ADB45F16E4
     [given([mockSchemeGenerator writeWorkspaceNamed:@"Tests"])
      willReturn:mockWorkspacePath];
 
-    XCTool *tool = [[[XCTool alloc] init] autorelease];
+    XCTool *tool = [[XCTool alloc] init];
 
     tool.arguments = @[
                        @"-workspace", TEST_DATA @"TestWorkspace-Library/TestWorkspace-Library.xcworkspace",
@@ -308,7 +341,8 @@ static NSString *kTestWorkspaceTestProjectOtherLibTargetID      = @"28ADB45F16E4
                        @"-sdk", @"iphonesimulator6.0",
                        @"build-tests",
                        @"-only", @"TestProject-LibraryTests",
-                       @"-skip-deps"
+                       @"-skip-deps",
+                       @"-reporter", @"plain",
                        ];
 
     [Swizzler whileSwizzlingSelector:@selector(schemeGenerator)
@@ -325,10 +359,10 @@ static NSString *kTestWorkspaceTestProjectOtherLibTargetID      = @"28ADB45F16E4
                        @"PLATFORM_NAME=iphonesimulator",
                        @"-workspace", mockWorkspacePath,
                        @"-scheme", @"Tests",
-                       @"OBJROOT=/Users/fpotter/Library/Developer/Xcode/DerivedData/TestWorkspace-Library-gjpyghvhqizojqckzrwwumrsqgoo/Build/Intermediates",
-                       @"SYMROOT=/Users/fpotter/Library/Developer/Xcode/DerivedData/TestWorkspace-Library-gjpyghvhqizojqckzrwwumrsqgoo/Build/Products",
-                       @"SHARED_PRECOMPS_DIR=/Users/fpotter/Library/Developer/Xcode/DerivedData/TestWorkspace-Library-gjpyghvhqizojqckzrwwumrsqgoo/Build/Intermediates/PrecompiledHeaders",
-                       [NSString stringWithFormat:@"-IDECustomDerivedDataLocation=%@xctool_temp_UNDERTEST/DerivedData", NSTemporaryDirectory()],
+                       @"OBJROOT=/Users/nekto/Library/Developer/Xcode/DerivedData/TestWorkspace-Library-asazjpviwiufbaajaofbmyqmmghn/Build/Intermediates",
+                       @"SYMROOT=/Users/nekto/Library/Developer/Xcode/DerivedData/TestWorkspace-Library-asazjpviwiufbaajaofbmyqmmghn/Build/Products",
+                       @"SHARED_PRECOMPS_DIR=/Users/nekto/Library/Developer/Xcode/DerivedData/TestWorkspace-Library-asazjpviwiufbaajaofbmyqmmghn/Build/Intermediates/PrecompiledHeaders",
+                       [NSString stringWithFormat:@"-IDECustomDerivedDataLocation=%@xctool_temp_UNDERTEST_%d/DerivedData", NSTemporaryDirectory(), [[NSProcessInfo processInfo] processIdentifier]],
                        @"build",
                        ]));
     assertThatInt(tool.exitStatus, equalToInt(0));
@@ -351,14 +385,15 @@ static NSString *kTestWorkspaceTestProjectOtherLibTargetID      = @"28ADB45F16E4
      // Make sure -showBuildSettings returns some data
      [LaunchHandlers handlerForShowBuildSettingsWithProject:TEST_DATA @"TestProject-Library-WithDifferentConfigurations/TestProject-Library.xcodeproj"
                                                      scheme:@"TestProject-Library"
-                                               settingsPath:TEST_DATA @"TestProject-Library-WithDifferentConfigurations-showBuildSettings.txt"],
+                                               settingsPath:TEST_DATA @"TestProject-Library-TestProject-Library-showBuildSettings.txt"],
      ]];
 
-    XCTool *tool = [[[XCTool alloc] init] autorelease];
+    XCTool *tool = [[XCTool alloc] init];
 
     tool.arguments = @[@"-project", TEST_DATA @"TestProject-Library-WithDifferentConfigurations/TestProject-Library.xcodeproj",
                        @"-scheme", @"TestProject-Library",
                        @"build-tests",
+                       @"-reporter", @"plain",
                        ];
 
     [TestUtil runWithFakeStreams:tool];
@@ -379,10 +414,10 @@ static NSString *kTestWorkspaceTestProjectOtherLibTargetID      = @"28ADB45F16E4
                        @"/fake/path/to/Tests.xcworkspace",
                        @"-scheme",
                        @"Tests",
-                       @"OBJROOT=/Users/fpotter/Library/Developer/Xcode/DerivedData/TestProject-Library-dcmgtqlclwxdzqevoakcspwlrpfm/Build/Intermediates",
-                       @"SYMROOT=/Users/fpotter/Library/Developer/Xcode/DerivedData/TestProject-Library-dcmgtqlclwxdzqevoakcspwlrpfm/Build/Products",
-                       @"SHARED_PRECOMPS_DIR=/Users/fpotter/Library/Developer/Xcode/DerivedData/TestProject-Library-dcmgtqlclwxdzqevoakcspwlrpfm/Build/Intermediates/PrecompiledHeaders",
-                       [NSString stringWithFormat:@"-IDECustomDerivedDataLocation=%@xctool_temp_UNDERTEST/DerivedData", NSTemporaryDirectory()],
+                       @"OBJROOT=/Users/nekto/Library/Developer/Xcode/DerivedData/TestProject-Library-frruszglismbfoceinskphldzhci/Build/Intermediates",
+                       @"SYMROOT=/Users/nekto/Library/Developer/Xcode/DerivedData/TestProject-Library-frruszglismbfoceinskphldzhci/Build/Products",
+                       @"SHARED_PRECOMPS_DIR=/Users/nekto/Library/Developer/Xcode/DerivedData/TestProject-Library-frruszglismbfoceinskphldzhci/Build/Intermediates/PrecompiledHeaders",
+                       [NSString stringWithFormat:@"-IDECustomDerivedDataLocation=%@xctool_temp_UNDERTEST_%d/DerivedData", NSTemporaryDirectory(), [[NSProcessInfo processInfo] processIdentifier]],
                        @"build"
                        ]));
   }];

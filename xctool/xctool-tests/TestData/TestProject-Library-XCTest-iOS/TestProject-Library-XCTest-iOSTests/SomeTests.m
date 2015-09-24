@@ -30,6 +30,24 @@
   [super tearDown];
 }
 
+- (void)testHandlingOfUnicodeStrings
+{
+  fprintf(stdout, "---");
+  [NSThread sleepForTimeInterval:0.25];
+  fprintf(stdout, "\342");
+  [NSThread sleepForTimeInterval:0.25];
+  fprintf(stdout, "---\n");
+  [NSThread sleepForTimeInterval:0.25];
+  fprintf(stdout, "");
+  fprintf(stdout, "---");
+  [NSThread sleepForTimeInterval:0.25];
+  fprintf(stdout, "0");
+  [NSThread sleepForTimeInterval:0.25];
+  fprintf(stdout, "---\n------\n");
+  fprintf(stdout, "\n\n");
+  fprintf(stdout, "");
+}
+
 - (void)testPrintSDK
 {
   NSLog(@"SDK: %@", [UIDevice currentDevice].systemVersion);
@@ -42,6 +60,7 @@
 
 - (void)testWillFail
 {
+  NSLog(@"%@", [[NSProcessInfo processInfo] environment]);
   XCTAssertEqualObjects(@"a", @"b", @"Strings aren't equal");
 }
 
@@ -67,6 +86,21 @@
   void *exceptionSymbols[256];
   int numSymbols = backtrace(exceptionSymbols, 256);
   backtrace_symbols_fd(exceptionSymbols, numSymbols, STDERR_FILENO);
+}
+
+- (void)testTimeout
+{
+  sleep(15);
+}
+
+- (void)testCrash
+{
+  [NSException raise:NSInternalInconsistencyException format:@"Test exception"];
+}
+
+- (void)testExits
+{
+  exit(1);
 }
 
 @end

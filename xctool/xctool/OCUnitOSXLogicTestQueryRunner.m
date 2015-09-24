@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,27 +16,41 @@
 
 #import "OCUnitOSXLogicTestQueryRunner.h"
 
-#import "iPhoneSimulatorRemoteClient.h"
+#import "SimulatorInfo.h"
 #import "TaskUtil.h"
-#import "XcodeBuildSettings.h"
 #import "XCToolUtil.h"
+#import "XcodeBuildSettings.h"
 
 @implementation OCUnitOSXLogicTestQueryRunner
 
+- (void)prepareToRunQuery
+{
+  // otest-query defaults are cleared to ensure that when the task created below
+  // is launched `NSUserDefaults` won't have unexpected values.
+  NSTask *cleanTask = CreateTaskInSameProcessGroup();
+  [cleanTask setLaunchPath:@"/usr/bin/defaults"];
+  [cleanTask setArguments:@[@"delete", @"otest-query-osx"]];
+  [cleanTask setStandardError:[NSFileHandle fileHandleWithNullDevice]];
+  [cleanTask launch];
+  [cleanTask waitUntilExit];
+}
+
 - (NSTask *)createTaskForQuery
 {
-  NSString *builtProductsDir = _buildSettings[Xcode_BUILT_PRODUCTS_DIR];
+  NSMutableDictionary *environment = OSXTestEnvironment(_simulatorInfo.buildSettings);
+  [environment addEntriesFromDictionary:@{
+    // Specifying `NSArgumentDomain` forces XCTest/SenTestingKit frameworks to use values
+    // of otest-query-osx `NSUserDefaults` which are changed in otest-query to manipulate
+    // mentioned frameworks behaviour.
+    @"NSArgumentDomain" : @"otest-query-osx",
+    @"OBJC_DISABLE_GC" : @"YES",
+    @"__CFPREFERENCES_AVOID_DAEMON" : @"YES",
+  }];
 
   NSTask *task = CreateTaskInSameProcessGroup();
   [task setLaunchPath:[XCToolLibExecPath() stringByAppendingPathComponent:@"otest-query-osx"]];
-  [task setArguments:@[ [self bundlePath] ]];
-  [task setEnvironment:@{
-    @"DYLD_FRAMEWORK_PATH" : builtProductsDir,
-    @"DYLD_LIBRARY_PATH" : builtProductsDir,
-    @"DYLD_FALLBACK_FRAMEWORK_PATH" : [XcodeDeveloperDirPath() stringByAppendingPathComponent:@"Library/Frameworks"],
-    @"NSUnbufferedIO" : @"YES",
-    @"OBJC_DISABLE_GC" : @"YES",
-  }];
+  [task setArguments:@[ [_simulatorInfo productBundlePath] ]];
+  [task setEnvironment:environment];
 
   return task;
 }

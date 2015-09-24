@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,10 +18,7 @@
 /*!
  Buffers calls to the underlying sink until this buffer is flushed.
  */
-@interface EventBuffer : NSObject <EventSink> {
-  id<EventSink> _underlyingSink;
-  NSMutableArray *_bufferedEventData;
-}
+@interface EventBuffer : NSObject <EventSink>
 
 + (instancetype)eventBufferForSink:(id<EventSink>)sink;
 

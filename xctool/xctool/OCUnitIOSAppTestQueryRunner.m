@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,24 +16,30 @@
 
 #import "OCUnitIOSAppTestQueryRunner.h"
 
+#import "SimulatorInfo.h"
 #import "TaskUtil.h"
-#import "XcodeBuildSettings.h"
 #import "XCToolUtil.h"
+#import "XcodeBuildSettings.h"
 
 @implementation OCUnitIOSAppTestQueryRunner
 
 - (NSTask *)createTaskForQuery
 {
-  NSString *version = [_buildSettings[Xcode_SDK_NAME] stringByReplacingOccurrencesOfString:@"iphonesimulator" withString:@""];
+  NSMutableDictionary *environment = IOSTestEnvironment(_simulatorInfo.buildSettings);
+  [environment addEntriesFromDictionary:@{
+    @"DYLD_INSERT_LIBRARIES" : [XCToolLibPath() stringByAppendingPathComponent:@"otest-query-lib-ios.dylib"],
+    // The test bundle that we want to query from, as loaded by otest-query-lib-ios.dylib.
+    @"OtestQueryBundlePath" : [_simulatorInfo productBundlePath],
+    @"__CFPREFERENCES_AVOID_DAEMON" : @"YES",
+  }];
 
-  return CreateTaskForSimulatorExecutable([self cpuType],
-                                          version,
-                                          [self testHostPath],
-                                          @[],
-                                          @{@"DYLD_INSERT_LIBRARIES" : [XCToolLibPath() stringByAppendingPathComponent:@"otest-query-lib-ios.dylib"],
-                                            // The test bundle that we want to query from, as loaded by otest-query-lib-ios.dylib.
-                                            @"OtestQueryBundlePath" : [self bundlePath],
-                                            });
+  return CreateTaskForSimulatorExecutable(
+    _simulatorInfo.buildSettings[Xcode_SDK_NAME],
+    _simulatorInfo,
+    [_simulatorInfo testHostPath],
+    @[],
+    environment
+  );
 }
 
 @end

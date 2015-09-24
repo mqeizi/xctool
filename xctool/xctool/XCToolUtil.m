@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,7 +16,10 @@
 
 #import "XCToolUtil.h"
 
+#import <CommonCrypto/CommonDigest.h>
+
 #import <mach-o/dyld.h>
+#import <limits.h>
 
 #import "EventGenerator.h"
 #import "EventSink.h"
@@ -25,8 +28,8 @@
 #import "ReporterEvents.h"
 #import "ReporterTask.h"
 #import "TaskUtil.h"
+#import "XcodeBuildSettings.h"
 #import "XcodeSubjectInfo.h"
-#import "XCToolUtil.h"
 
 static NSString *__tempDirectoryForAction = nil;
 
@@ -52,9 +55,9 @@ NSDictionary *BuildSettingsFromOutput(NSString *output)
   if ([scanner scanString:@"Build settings from command line:\n" intoString:NULL]) {
     scanUntilEmptyLine();
   }
-  
+
   if ([scanner scanString:@"Build settings from configuration file" intoString:NULL]) {
-    scanUntilEmptyLine(); 
+    scanUntilEmptyLine();
   }
 
   for (;;) {
@@ -67,7 +70,8 @@ NSDictionary *BuildSettingsFromOutput(NSString *output)
     // or, if there are spaces in the target name...
     // 'Build settings for action build and target "Some Target Name":'
     if (!([scanner scanString:@"Build settings for action test and target " intoString:NULL] ||
-          [scanner scanString:@"Build settings for action build and target " intoString:NULL])) {
+          [scanner scanString:@"Build settings for action build and target " intoString:NULL] ||
+          [scanner scanString:@"Build settings for action analyze and target " intoString:NULL])) {
       break;
     }
 
@@ -110,21 +114,25 @@ NSString *AbsoluteExecutablePath() {
   uint32_t execRelativePathSize = sizeof(execRelativePath);
   _NSGetExecutablePath(execRelativePath, &execRelativePathSize);
 
-  return AbsolutePathFromRelative([NSString stringWithUTF8String:execRelativePath]);
+  return AbsolutePathFromRelative(@(execRelativePath));
 }
 
 NSString *XCToolBasePath(void)
 {
-  if (IsRunningUnderTest()) {
-    // The Xcode scheme is configured to set XT_INSTALL_ROOT when running
-    // tests.
-    NSString *installRoot = [[NSProcessInfo processInfo] environment][@"XT_INSTALL_ROOT"];
-    NSCAssert(installRoot, @"XT_INSTALL_ROOT is not set.");
-    return installRoot;
-  } else {
-    return [[AbsoluteExecutablePath() stringByDeletingLastPathComponent]
-            stringByDeletingLastPathComponent];
-  }
+  static NSString *path;
+  static dispatch_once_t onceToken;
+  dispatch_once(&onceToken, ^{
+    if (IsRunningUnderTest()) {
+      // The Xcode scheme is configured to set XT_INSTALL_ROOT when running
+      // tests.
+      NSString *installRoot = [[NSProcessInfo processInfo] environment][@"XT_INSTALL_ROOT"];
+      NSCAssert(installRoot, @"XT_INSTALL_ROOT is not set.");
+      path = installRoot;
+    } else {
+      path = [[AbsoluteExecutablePath() stringByDeletingLastPathComponent] stringByDeletingLastPathComponent];
+    }
+  });
+  return path;
 }
 
 NSString *XCToolLibPath(void)
@@ -162,7 +170,6 @@ NSString *XcodeDeveloperDirPathViaForcedConcreteTask(BOOL forceConcreteTask)
     path = [path stringByTrimmingCharactersInSet:
             [NSCharacterSet newlineCharacterSet]];
 
-    [task release];
     return path;
   };
 
@@ -173,7 +180,7 @@ NSString *XcodeDeveloperDirPathViaForcedConcreteTask(BOOL forceConcreteTask)
     return getPath();
   } else {
     if (savedPath == nil) {
-      savedPath = [getPath() retain];
+      savedPath = getPath();
     }
     return savedPath;
   }
@@ -187,7 +194,7 @@ NSString *MakeTempFileWithPrefix(NSString *prefix)
   strcpy(tempPath, template);
 
   int handle = mkstemp(tempPath);
-  assert(handle != -1);
+  NSCAssert(handle != -1, @"Failed to make temporary file name for template %s, error: %d", template, handle);
   close(handle);
 
   return [NSString stringWithFormat:@"%s", tempPath];
@@ -202,13 +209,13 @@ static void AddSDKToDictionary(NSMutableDictionary *dict,
                                NSScanner *scanner,
                                NSString *sdk)
 {
-  
+
   NSMutableDictionary *versionDict = [NSMutableDictionary dictionary];
 
   // This isn't present in the output, but adding the mapping here in order
   // to assist with looking up the SDK value quickly
   versionDict[@"SDK"] = sdk;
-  
+
   for (;;) {
     NSString *line = nil;
     NSString *key = nil;
@@ -223,7 +230,7 @@ static void AddSDKToDictionary(NSMutableDictionary *dict,
     }
 
     NSScanner *lineScanner = [NSScanner scannerWithString:line];
-    
+
     // Parse the label/value pair from the line and add it to the dictionary
     [lineScanner scanUpToString:@": " intoString:&key];
     [lineScanner scanString:@": " intoString:nil];
@@ -237,7 +244,10 @@ static void AddSDKToDictionary(NSMutableDictionary *dict,
   // leave us with 'iphoneos' mapped to the newest 'iphoneos' SDK.
   NSScanner *versionScanner = [NSScanner scannerWithString:sdk];
   NSString *sdkWithoutVersion = nil;
-  [versionScanner scanCharactersFromSet:[NSCharacterSet letterCharacterSet]
+  NSMutableCharacterSet *sdkCharacterSet = [[NSMutableCharacterSet alloc] init];
+  [sdkCharacterSet formUnionWithCharacterSet:[NSCharacterSet letterCharacterSet]];
+  [sdkCharacterSet formUnionWithCharacterSet:[NSCharacterSet characterSetWithCharactersInString:@"-+"]];
+  [versionScanner scanCharactersFromSet:sdkCharacterSet
                              intoString:&sdkWithoutVersion];
   dict[sdkWithoutVersion] = versionDict;
   dict[sdk] = versionDict;
@@ -248,77 +258,81 @@ NSDictionary *GetAvailableSDKsInfo()
   NSTask *task = CreateTaskInSameProcessGroup();
   [task setLaunchPath:[XcodeDeveloperDirPath() stringByAppendingPathComponent:@"usr/bin/xcodebuild"]];
   [task setArguments:@[@"-sdk", @"-version"]];
-  
+
   NSDictionary *output = LaunchTaskAndCaptureOutput(task,
                                                     @"querying available SDKs");
   NSString *sdkContents = output[@"stdout"];
-  [task release];
-  
+
   NSScanner *scanner = [NSScanner scannerWithString:sdkContents];
-  
+
   // We're choosing not to skip characters since we need to know when we
   // encounter newline characters to determine when we've consumed an SDK
   // "block"
   [scanner setCharactersToBeSkipped:nil];
-  
-  // Regex to pull out SDK value; matching lines with ".sdk" and "([\w.]+)"
+
+  // Regex to pull out SDK value; matching lines with ".sdk" and "([\w-.+]+)"
   // (capturing group around what's inside of the parentheses).
   NSRegularExpression *sdkVersionRegex =
     [NSRegularExpression
-     regularExpressionWithPattern:@"^[\\w.]+.sdk[\\s\\w-.]+\\(([\\w.]+)\\)$"
+     regularExpressionWithPattern:@"^[\\w-.+]+.sdk[\\s\\w-.+]+\\(([\\w-.+]+)\\)$"
                           options:0
                             error:nil];
-  
-  NSMutableDictionary *versionsAvaialble = [NSMutableDictionary dictionary];
-  
+
+  NSMutableDictionary *versionsAvailable = [NSMutableDictionary dictionary];
+
   while (![scanner isAtEnd]) {
     NSString *str = nil;
 
     // Read current line
     [scanner scanUpToString:@"\n" intoString:&str];
     [scanner scanString:@"\n" intoString:nil];
-    
+
     // Attempt to match the regex
     NSArray *match = [sdkVersionRegex matchesInString:str
                                               options:0
                                                 range:NSMakeRange(0, str.length)];
-    
+
     // If we don't find a match, we are done with the SDK parsing
     if (match.count == 0) {
       break;
     }
-    
+
     // Pull the SDK value from our capturing group
     NSString *sdkVersion = [str substringWithRange:[match[0] rangeAtIndex:1]];
-    
-    AddSDKToDictionary(versionsAvaialble, scanner, sdkVersion);
+
+    AddSDKToDictionary(versionsAvailable, scanner, sdkVersion);
   }
-  
-  return versionsAvaialble;
+
+  return versionsAvailable;
+}
+
+NSDictionary *GetAvailableSDKsAndAliasesWithSDKInfo(NSDictionary *sdksInfo)
+{
+  NSMutableDictionary *versionsAvailable = [NSMutableDictionary dictionary];
+
+  for (NSString *sdkAlias in sdksInfo) {
+    NSDictionary *sdkInfo = sdksInfo[sdkAlias];
+    versionsAvailable[sdkAlias] = sdkInfo[@"SDK"];
+    versionsAvailable[sdkInfo[@"Path"]] = sdkInfo[@"SDK"];
+  }
+
+  return versionsAvailable;
 }
 
 NSDictionary *GetAvailableSDKsAndAliases()
 {
-  NSMutableDictionary *versionsAvailable = [NSMutableDictionary dictionary];
-  
   // GetAvailableSDKsInfo already does the hard work for us; we just need to
   //  iterate through its result to pull out the values cooresponding to the
   // "SDK" field for each of the SDK entries.
   NSDictionary *sdkInfo = GetAvailableSDKsInfo();
-  NSArray *keys = [sdkInfo allKeys];
-  
-  for (NSString *key in keys) {
-    versionsAvailable[key] = sdkInfo[key][@"SDK"];
-  }
-  
-  return versionsAvailable;
+  return GetAvailableSDKsAndAliasesWithSDKInfo(sdkInfo);
 }
 
 BOOL IsRunningUnderTest()
 {
   NSString *processName = [[NSProcessInfo processInfo] processName];
-  return ([processName isEqualToString:@"otest"] ||
-          [processName isEqualToString:@"otest-x86_64"]);
+  return ([processName isEqualToString:@"xctest"] ||
+          [processName isEqualToString:@"xctest-x86_64"]);
 }
 
 BOOL LaunchXcodebuildTaskAndFeedEventsToReporters(NSTask *task,
@@ -327,7 +341,7 @@ BOOL LaunchXcodebuildTaskAndFeedEventsToReporters(NSTask *task,
                                                   long long *errorCodeOut)
 {
   __block NSString *errorMessage = nil;
-  __block long long errorCode = LONG_LONG_MIN;
+  __block long long errorCode = LLONG_MIN;
   __block BOOL hadFailingBuildCommand = NO;
 
   LaunchTaskAndFeedOuputLinesToBlock(task,
@@ -349,7 +363,7 @@ BOOL LaunchXcodebuildTaskAndFeedEventsToReporters(NSTask *task,
       // xcodebuild failed with an error message.  We don't want this to bubble
       // up to reporters itself - instead the caller will capture the error
       // message and include it in the 'end-xcodebuild' event.
-      errorMessage = [event[@"message"] retain];
+      errorMessage = event[@"message"];
       errorCode = [event[@"code"] longLongValue];
     } else {
       PublishEventToReporters(reporters, event);
@@ -367,6 +381,21 @@ BOOL LaunchXcodebuildTaskAndFeedEventsToReporters(NSTask *task,
   if (errorMessage) {
     *errorMessageOut = errorMessage;
     *errorCodeOut = errorCode;
+  }
+
+  if ([task terminationReason] == NSTaskTerminationReasonUncaughtSignal) {
+    // xcodebuild crashed
+    *errorMessageOut = [NSString stringWithFormat:@"xcodebuild crashed when running the task below:\n%@.", CommandLineEquivalentForTask((NSConcreteTask *)task)];
+    *errorCodeOut = -1;
+
+    // waiting for xcodebuild crash report be generated
+    sleep(5);
+
+    // retreiving latest crash report
+    NSString *crashReportPath = LatestXcodebuildCrashReportPath();
+    if (crashReportPath && [[NSFileManager defaultManager] fileExistsAtPath:crashReportPath]) {
+      *errorMessageOut = [*errorMessageOut stringByAppendingFormat:@"\n\nLatest available xcodebuild crash report (%@):\n%@", crashReportPath, [NSString stringWithContentsOfFile:crashReportPath encoding:NSUTF8StringEncoding error:nil]];
+    }
   }
 
   // xcodebuild's 'archive' action has a bug where the build can fail, but
@@ -390,7 +419,6 @@ BOOL RunXcodebuildAndFeedEventsToReporters(NSArray *arguments,
   [environment addEntriesFromDictionary:@{
    @"DYLD_INSERT_LIBRARIES" : [XCToolLibPath()
                                stringByAppendingPathComponent:@"xcodebuild-shim.dylib"],
-   @"PATH": @"/usr/bin:/bin:/usr/sbin:/sbin",
    }];
   [task setEnvironment:environment];
 
@@ -433,7 +461,6 @@ BOOL RunXcodebuildAndFeedEventsToReporters(NSArray *arguments,
 
   PublishEventToReporters(reporters, endEvent);
 
-  [task release];
   return succeeded;
 }
 
@@ -544,6 +571,43 @@ NSArray *ParseArgumentsFromArgumentString(NSString *string)
   return arguments;
 }
 
+NSDictionary *ParseDestinationString(NSString *destinationString, NSString **errorMessage)
+{
+  NSMutableDictionary *resultBuilder = [[NSMutableDictionary alloc] init];
+
+  // Might need to do this well later on. Right now though, just blindly split on the comma.
+  NSArray *components = [destinationString componentsSeparatedByString:@","];
+  for (NSString *component in components) {
+    NSError *error = nil;
+    NSString *pattern = @"^\\s*([^=]*)=([^=]*)\\s*$";
+    NSRegularExpression *re = [[NSRegularExpression alloc] initWithPattern:pattern options:0 error:&error];
+    if (error) {
+      *errorMessage = [NSString stringWithFormat:@"Error while creating regex with pattern '%@'. Reason: '%@'.", pattern, [error localizedFailureReason]];
+      return nil;
+    }
+    NSArray *matches = [re matchesInString:component options:0 range:NSMakeRange(0, [component length])];
+    NSCAssert(matches, @"Apple's documentation states that the above call will never return nil.");
+    if ([matches count] != 1) {
+      *errorMessage = [NSString stringWithFormat:@"The string '%@' is formatted badly. It should be KEY=VALUE. "
+                       @"The number of matches with regex '%@' was %llu.",
+                       component, pattern, (long long unsigned)[matches count]];
+      return nil;
+    }
+    NSTextCheckingResult *match = matches[0];
+    if ([match numberOfRanges] != 3) {
+      *errorMessage = [NSString stringWithFormat:@"The string '%@' is formatted badly. It should be KEY=VALUE. "
+                       @"The number of ranges with regex '%@' was %llu.",
+                       component, pattern, (long long unsigned)[match numberOfRanges]];
+      return nil;
+    }
+    NSString *lhs = [component substringWithRange:[match rangeAtIndex:1]];
+    NSString *rhs = [component substringWithRange:[match rangeAtIndex:2]];
+    resultBuilder[lhs] = rhs;
+  }
+
+  return resultBuilder;
+}
+
 NSString *TemporaryDirectoryForAction()
 {
   if (__tempDirectoryForAction == nil) {
@@ -552,12 +616,12 @@ NSString *TemporaryDirectoryForAction()
     // Let our names be consistent while under test - we don't want our tests
     // to have to match against random values.
     if (IsRunningUnderTest()) {
-      nameTemplate = @"xctool_temp_UNDERTEST";
+      nameTemplate = [NSString stringWithFormat:@"xctool_temp_UNDERTEST_%d", [[NSProcessInfo processInfo] processIdentifier]];
     } else {
       nameTemplate = @"xctool_temp_XXXXXX";
     }
 
-    __tempDirectoryForAction = [MakeTemporaryDirectory(nameTemplate) retain];
+    __tempDirectoryForAction = MakeTemporaryDirectory(nameTemplate);
   }
 
   return __tempDirectoryForAction;
@@ -575,7 +639,6 @@ void CleanupTemporaryDirectoryForAction()
       abort();
     }
 
-    [__tempDirectoryForAction release];
     __tempDirectoryForAction = nil;
   }
 }
@@ -594,7 +657,7 @@ void PublishEventToReporters(NSArray *reporters, NSDictionary *event)
 NSArray *AvailableReporters()
 {
   NSString *reportersPath = XCToolReportersPath();
-  
+
   NSError *error = nil;
   NSArray *contents = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:reportersPath
                                                                           error:&error];
@@ -606,9 +669,9 @@ NSArray *AvailableReporters()
 NSString *AbsolutePathFromRelative(NSString *path)
 {
   char absolutePath[PATH_MAX] = {0};
-  assert(realpath((const char *)[path UTF8String], absolutePath) != NULL);
+  NSCAssert(realpath((const char *)[path UTF8String], absolutePath) != NULL, @"Failed to resolve the path: %s", absolutePath);
 
-  return [NSString stringWithUTF8String:absolutePath];
+  return @(absolutePath);
 }
 
 NSString *SystemPaths()
@@ -622,28 +685,96 @@ NSString *SystemPaths()
   return [[pathLines componentsSeparatedByString:@"\n"] componentsJoinedByString:@":"];
 }
 
-int XcodebuildVersion()
+/**
+ SenTesting.framework location:
+ - Xcode 6: Contents/Developer/Library/Frameworks directory
+ XCTest.framework location:
+ - Xcode 6: Contents/Developer/Platforms/{iPhoneSimulator.platform/MacOSX}/Developer/Library/Frameworks
+ */
+NSString *IOSTestFrameworkDirectories()
 {
-  NSString *xcodePlistPath = [XcodeDeveloperDirPathViaForcedConcreteTask(YES)
-                              stringByAppendingPathComponent:@"../Info.plist"];
-  NSCAssert([[NSFileManager defaultManager] fileExistsAtPath:xcodePlistPath isDirectory:NULL],
-            @"Cannot find Xcode's plist at: %@", xcodePlistPath);
-
-  NSDictionary *infoDict = [NSDictionary dictionaryWithContentsOfFile:xcodePlistPath];
-  NSCAssert(infoDict[@"DTXcode"], @"Cannot find the 'DTXcode' key in Xcode's Info.plist.");
-
-  return [infoDict[@"DTXcode"] intValue];
+  NSArray *directories = @[
+    [XcodeDeveloperDirPath() stringByAppendingPathComponent:@"Library/Frameworks"],
+    [XcodeDeveloperDirPath() stringByAppendingPathComponent:@"Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks"],
+  ];
+  return [directories componentsJoinedByString:@":"];
 }
 
-BOOL ToolchainIsXcode5OrBetter(void)
+NSString *OSXTestFrameworkDirectories()
 {
-  return (XcodebuildVersion() >= 0500);
+  NSArray *directories = @[
+    [XcodeDeveloperDirPath() stringByAppendingPathComponent:@"Library/Frameworks"],
+    [XcodeDeveloperDirPath() stringByAppendingPathComponent:@"Platforms/MacOSX.platform/Developer/Library/Frameworks"],
+  ];
+  return [directories componentsJoinedByString:@":"];
+}
+
+NSString *AllFrameworkAndLiraryPathsInBuildSettings(NSDictionary *buildSettings)
+{
+  NSMutableSet *set = [NSMutableSet set];
+  for (NSString *pathKey in @[Xcode_BUILT_PRODUCTS_DIR, Xcode_PRODUCT_TYPE_FRAMEWORK_SEARCH_PATHS, Xcode_TEST_FRAMEWORK_SEARCH_PATHS]) {
+    NSString *pathExists = buildSettings[pathKey];
+    if (pathExists) {
+      [set addObject:[pathExists stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]]];
+    }
+  }
+  return [[set allObjects] componentsJoinedByString:@":"];
+}
+
+NSMutableDictionary *IOSTestEnvironment(NSDictionary *buildSettings)
+{
+  NSString *paths = AllFrameworkAndLiraryPathsInBuildSettings(buildSettings);
+  return [@{
+    @"DYLD_FRAMEWORK_PATH" : paths,
+    @"DYLD_LIBRARY_PATH" : paths,
+    @"DYLD_FALLBACK_FRAMEWORK_PATH" : IOSTestFrameworkDirectories(),
+  } mutableCopy];
+}
+
+NSMutableDictionary *OSXTestEnvironment(NSDictionary *buildSettings)
+{
+  NSString *paths = AllFrameworkAndLiraryPathsInBuildSettings(buildSettings);
+  return [@{
+    @"DYLD_FRAMEWORK_PATH" : paths,
+    @"DYLD_LIBRARY_PATH" : paths,
+    @"DYLD_FALLBACK_FRAMEWORK_PATH" : OSXTestFrameworkDirectories(),
+    @"NSUnbufferedIO" : @"YES",
+  } mutableCopy];
+}
+
+NSString *XcodebuildVersion()
+{
+  static NSString *DTXcode;
+  static dispatch_once_t onceToken;
+  dispatch_once(&onceToken, ^{
+    NSString *xcodePlistPath = [XcodeDeveloperDirPathViaForcedConcreteTask(YES)
+                                stringByAppendingPathComponent:@"../Info.plist"];
+    NSCAssert([[NSFileManager defaultManager] fileExistsAtPath:xcodePlistPath isDirectory:NULL],
+              @"Cannot find Xcode's plist at: %@", xcodePlistPath);
+
+    NSDictionary *infoDict = [NSDictionary dictionaryWithContentsOfFile:xcodePlistPath];
+    NSCAssert(infoDict[@"DTXcode"], @"Cannot find the 'DTXcode' key in Xcode's Info.plist.");
+
+    DTXcode = infoDict[@"DTXcode"];
+  });
+  return DTXcode;
+}
+
+BOOL ToolchainIsXcode7OrBetter(void)
+{
+  static BOOL result;
+  static dispatch_once_t onceToken;
+  dispatch_once(&onceToken, ^{
+    NSComparisonResult cmpResult = [XcodebuildVersion() compare:@"0700"];
+    result = (cmpResult != NSOrderedAscending);
+  });
+  return result;
 }
 
 NSString *MakeTemporaryDirectory(NSString *nameTemplate)
 {
-  NSMutableData *template = [[[[NSTemporaryDirectory() stringByAppendingPathComponent:nameTemplate]
-                               dataUsingEncoding:NSUTF8StringEncoding] mutableCopy] autorelease];
+  NSMutableData *template = [[[NSTemporaryDirectory() stringByAppendingPathComponent:nameTemplate]
+                               dataUsingEncoding:NSUTF8StringEncoding] mutableCopy];
   [template appendBytes:"\0" length:1];
 
   if (!mkdtemp(template.mutableBytes) && !IsRunningUnderTest()) {
@@ -656,12 +787,12 @@ NSString *MakeTemporaryDirectory(NSString *nameTemplate)
 
 // Forward declaration for private CFBundle API.
 // https://www.opensource.apple.com/source/CF/CF-855.11/CFBundle.c
-CFStringRef _CFBundleCopyFileTypeForFileURL(CFURLRef url);
+CFStringRef _CFBundleCopyFileTypeForFileURL(CFURLRef url) CF_RETURNS_RETAINED;
 
 static BOOL IsMachOExecutable(NSString *path)
 {
   NSURL *fileURL = [NSURL fileURLWithPath:path];
-  CFStringRef fileType = _CFBundleCopyFileTypeForFileURL((CFURLRef)fileURL);
+  CFStringRef fileType = _CFBundleCopyFileTypeForFileURL((__bridge CFURLRef)fileURL);
 
   if (fileType != NULL) {
     CFComparisonResult result = CFStringCompare(fileType, CFSTR("tool"), 0);
@@ -674,14 +805,108 @@ static BOOL IsMachOExecutable(NSString *path)
 
 BOOL TestableSettingsIndicatesApplicationTest(NSDictionary *settings)
 {
-  NSString *testHostPath = settings[@"TEST_HOST"];
-
-  // Sometimes the TEST_HOST is wrapped in double quotes - not sure if our
-  // projects are misconfigured or if these are funky Xcode defaults.
-  testHostPath = [testHostPath stringByTrimmingCharactersInSet:
-                  [NSCharacterSet characterSetWithCharactersInString:@"\""]];
-
+  NSString *testHostPath = TestHostPathForBuildSettings(settings);
   return (testHostPath != nil &&
           [[NSFileManager defaultManager] isExecutableFileAtPath:testHostPath] &&
           IsMachOExecutable(testHostPath));
+}
+
+NSString *LatestXcodebuildCrashReportPath()
+{
+  NSMutableArray *crashReports = [NSMutableArray array];
+  NSArray *directories = @[[NSHomeDirectory() stringByAppendingPathComponent:@"Library/Logs/DiagnosticReports"],
+                           @"/Library/Logs/DiagnosticReports"];
+  NSFileManager *manager = [[NSFileManager alloc] init];
+  for (NSString *directory in directories) {
+    NSDirectoryEnumerator *dirEnum = [manager enumeratorAtPath:directory];
+    NSString *file;
+    while ((file = [dirEnum nextObject])) {
+      if (![file hasPrefix:@"xcodebuild"] ||
+          ![file hasSuffix:@"crash"]) {
+        continue;
+      }
+
+      // process not sent Xcode crash
+      [crashReports addObject:[directory stringByAppendingPathComponent:file]];
+    }
+  }
+
+  return [crashReports lastObject];
+}
+
+
+NSString *HashForString(NSString *string)
+{
+  NSData *data = [string dataUsingEncoding:NSUTF8StringEncoding];
+  uint8_t digest[CC_SHA1_DIGEST_LENGTH];
+  CC_SHA1(data.bytes, (CC_LONG)data.length, digest);
+  NSMutableString *output = [NSMutableString stringWithCapacity:CC_SHA1_DIGEST_LENGTH * 2];
+  for (int i = 0; i < CC_SHA1_DIGEST_LENGTH; i++) {
+    [output appendFormat:@"%02x", digest[i]];
+  }
+  return output;
+}
+
+
+cpu_type_t CpuTypeForTestBundleAtPath(NSString *testBundlePath)
+{
+  if (![[NSFileManager defaultManager] fileExistsAtPath:testBundlePath]) {
+    // Many unit tests specify a nonexistent bundle.
+    return CPU_TYPE_ANY;
+  }
+
+  NSBundle *testBundle = [NSBundle bundleWithPath:testBundlePath];
+  if (!testBundle) {
+    // path could be directly to the executable and not to the bundle
+    NSArray *bundleExtensions = @[@"app", @"octest", @"xctest"];
+    for (NSString *extension in bundleExtensions) {
+      NSRange range = [testBundlePath rangeOfString:[@"." stringByAppendingString:extension] options:NSBackwardsSearch];
+      if (range.location == NSNotFound) {
+        continue;
+      }
+
+      testBundlePath = [testBundlePath substringToIndex:range.location + range.length];
+      testBundle = [NSBundle bundleWithPath:testBundlePath];
+      break;
+    }
+  }
+
+  NSCAssert(testBundle, @"Cannot read bundle at path: %@", testBundlePath);
+
+  NSArray *archs = [testBundle executableArchitectures];
+
+  BOOL isI386Only = YES;
+  BOOL isX86_64Only = YES;
+  for (NSNumber *arch in archs) {
+    switch ([arch unsignedIntegerValue]) {
+      case NSBundleExecutableArchitectureI386:
+        isX86_64Only = NO;
+        break;
+
+      case NSBundleExecutableArchitectureX86_64:
+        isI386Only = NO;
+        break;
+    }
+  }
+  NSCAssert(!(isI386Only && isX86_64Only), @"Bundle's executable code doesn't support nor i386, nor x86_64 CPU types. Bundle path: %@, supported cpu types: %@.", testBundlePath, archs);
+
+  if (isX86_64Only) {
+    return CPU_TYPE_X86_64;
+  } else if (isI386Only) {
+    return CPU_TYPE_I386;
+  }
+  return CPU_TYPE_ANY;
+}
+
+NSString *TestHostPathForBuildSettings(NSDictionary *buildSettings)
+{
+  // TEST_HOST will sometimes be wrapped in "quotes".
+  return [buildSettings[Xcode_TEST_HOST] stringByTrimmingCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"\""]];
+}
+
+NSString *ProductBundlePathForBuildSettings(NSDictionary *buildSettings)
+{
+  NSString *builtProductsDir = buildSettings[Xcode_BUILT_PRODUCTS_DIR];
+  NSString *fullProductName = buildSettings[Xcode_FULL_PRODUCT_NAME];
+  return [builtProductsDir stringByAppendingPathComponent:fullProductName];
 }

@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,13 +23,13 @@
   Testable *copy = [super copyWithZone:zone];
 
   if (copy) {
-    copy.senTestList = self.senTestList;
-    copy.senTestInvertScope = self.senTestInvertScope;
-    copy.skipped = self.skipped;
-    copy.arguments = self.arguments;
-    copy.environment = self.environment;
-    copy.macroExpansionProjectPath = self.macroExpansionProjectPath;
-    copy.macroExpansionTarget = self.macroExpansionTarget;
+    copy.senTestList = _senTestList;
+    copy.senTestInvertScope = _senTestInvertScope;
+    copy.skipped = _skipped;
+    copy.arguments = _arguments;
+    copy.environment = _environment;
+    copy.macroExpansionProjectPath = _macroExpansionProjectPath;
+    copy.macroExpansionTarget = _macroExpansionTarget;
   }
 
   return copy;
@@ -47,13 +47,13 @@
 
   return ([super isEqual:other] &&
           [other isKindOfClass:[Testable class]] &&
-          bothNilOrEqual(self.senTestList, other.senTestList) &&
-          self.senTestInvertScope == other.senTestInvertScope &&
-          self.skipped == other.skipped &&
-          bothNilOrEqual(self.arguments, other.arguments) &&
-          bothNilOrEqual(self.environment, other.environment) &&
-          bothNilOrEqual(self.macroExpansionProjectPath, other.macroExpansionProjectPath) &&
-          bothNilOrEqual(self.macroExpansionTarget, other.macroExpansionTarget));
+          bothNilOrEqual(_senTestList, other.senTestList) &&
+          _senTestInvertScope == other.senTestInvertScope &&
+          _skipped == other.skipped &&
+          bothNilOrEqual(_arguments, other.arguments) &&
+          bothNilOrEqual(_environment, other.environment) &&
+          bothNilOrEqual(_macroExpansionProjectPath, other.macroExpansionProjectPath) &&
+          bothNilOrEqual(_macroExpansionTarget, other.macroExpansionTarget));
 }
 
 - (NSUInteger)hash

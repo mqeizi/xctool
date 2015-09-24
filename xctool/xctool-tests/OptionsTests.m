@@ -1,5 +1,5 @@
 //
-// Copyright 2013 Facebook
+// Copyright 2004-present Facebook. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,27 +16,28 @@
 
 #import <objc/runtime.h>
 
-#import <SenTestingKit/SenTestingKit.h>
+#import <XCTest/XCTest.h>
 
 #import "Action.h"
 #import "FakeTask.h"
 #import "FakeTaskManager.h"
-#import "Options.h"
 #import "Options+Testing.h"
+#import "Options.h"
 #import "ReporterTask.h"
+#import "RunTestsAction.h"
 #import "TaskUtil.h"
-#import "XcodeSubjectInfo.h"
 #import "XCToolUtil.h"
+#import "XcodeSubjectInfo.h"
 
-@interface OptionsTests : SenTestCase
+@interface OptionsTests : XCTestCase
 @end
 
 @implementation OptionsTests
 
 - (void)testHelpOptionSetsFlag
 {
-  assertThatBool([[Options optionsFrom:@[@"-h"]] showHelp], equalToBool(YES));
-  assertThatBool([[Options optionsFrom:@[@"-help"]] showHelp], equalToBool(YES));
+  assertThatBool([[Options optionsFrom:@[@"-h"]] showHelp], isTrue());
+  assertThatBool([[Options optionsFrom:@[@"-help"]] showHelp], isTrue());
 }
 
 - (void)testOptionsPassThrough
@@ -50,6 +51,8 @@
   assertThat(([[Options optionsFrom:@[@"-xcconfig", @"something.xcconfig"]] xcconfig]), equalTo(@"something.xcconfig"));
   assertThat(([[Options optionsFrom:@[@"-jobs", @"10"]] jobs]), equalTo(@"10"));
   assertThat(([[Options optionsFrom:@[@"-destination", @"platform=iOS Simulator"]] destination]), equalTo(@"platform=iOS Simulator"));
+  assertThat(([[Options optionsFrom:@[@"-destination-timeout", @"10"]] destinationTimeout]), equalTo(@"10"));
+  assertThat(([[Options optionsFrom:@[@"-launch-timeout", @"20"]] launchTimeout]), equalTo(@"20"));
 }
 
 - (void)testReporterOptionsSetupReporters
@@ -81,18 +84,26 @@
                        @"DEF" : @"456"}));
 }
 
-- (void)testWorkspaceOrProjectAreRequired
+- (void)testDisallowRunTestsWithBothTestsAndWorkspaceAndProject
 {
-  [[Options optionsFrom:@[]]
+  [[Options optionsFrom:@[
+    @"-workspace", @"Something.xcworkspace",
+    @"-project", @"Something.xcodeproj",
+    @"run-tests",
+    @"-logicTest", TEST_DATA @"tests-ios-test-bundle/TestProject-LibraryTests.octest",
+    ]]
    assertOptionsFailToValidateWithError:
-   @"Either -workspace, -project, or -find-target must be specified."];
+      @"If -logicTest or -appTest are specified, -workspace, -project, and -scheme must not be specified."];
+}
 
+- (void)testDisallowBothWorkspaceAndProjectSpecified
+{
   [[Options optionsFrom:@[
     @"-workspace", @"Something.xcworkspace",
     @"-project", @"Something.xcodeproj"
     ]]
    assertOptionsFailToValidateWithError:
-   @"Either -workspace or -project must be specified, but not both."];
+   @"Either -workspace or -project can be specified, but not both."];
 }
 
 - (void)testSchemeIsRequired
@@ -165,6 +176,7 @@
    assertOptionsFailToValidateWithError:
    @"Can't find scheme 'TestProject-Library-Bogus'.\n\n"
    @"Possible schemes include:\n"
+   @"  Target Name With Spaces\n"
    @"  TestProject-Library\n\n"
    @"TIP: This might happen if you're relying on Xcode to autocreate your schemes\n"
    @"and your scheme files don't yet exist.  xctool, like xcodebuild, isn't able to\n"
@@ -193,6 +205,42 @@
    @"  TestProject-Library"
    withBuildSettingsFromFile:
    TEST_DATA @"TestWorkspace-Library-TestProject-Library-showBuildSettings.txt"];
+}
+
+- (void)testResultBundlePathMustBeADirectory
+{
+  NSString *validFilePath = TEST_DATA @"TestWorkspace-Library-TestProject-Library-showBuildSettings.txt";
+  [[Options optionsFrom:@[
+                          @"-scheme", @"TestProject-Library",
+                          @"-workspace", TEST_DATA @"TestWorkspace-Library/TestWorkspace-Library.xcworkspace",
+                          @"-resultBundlePath", validFilePath,
+                          ]]
+   assertOptionsFailToValidateWithError:
+   [NSString stringWithFormat:@"Specified result bundle path must be a directory: %@", validFilePath]];
+}
+
+- (void)testResultBundlePathMustExist
+{
+  NSString *invalidResultBundlePath = @"SOME_BAD_PATH";
+  [[Options optionsFrom:@[
+                          @"-scheme", @"TestProject-Library",
+                          @"-workspace", TEST_DATA @"TestWorkspace-Library/TestWorkspace-Library.xcworkspace",
+                          @"-resultBundlePath", invalidResultBundlePath,
+                          ]]
+   assertOptionsFailToValidateWithError:
+   [NSString stringWithFormat:@"Specified result bundle path doesn't exist: %@", invalidResultBundlePath]];
+}
+
+- (void)testResultBundlePathWorks
+{
+  Options *options = [Options optionsFrom:@[@"-resultBundlePath", @"foo"]];
+  assertThat(options.resultBundlePath, equalTo(@"foo"));
+}
+
+- (void)testDerivedDataPathWorks
+{
+  Options *options = [Options optionsFrom:@[@"-derivedDataPath", @"foo"]];
+  assertThat(options.derivedDataPath, equalTo(@"foo"));
 }
 
 - (void)testFindTargetWorks
@@ -263,7 +311,8 @@
   NSArray *arguments = @[@"-configuration", @"SomeConfig",
                          @"-sdk", @"SomeSDK",
                          @"-arch", @"SomeArch",
-                         @"-destination", @"platform=iOS",
+                         @"-destination", @"platform=iOS,OS=6.1",
+                         @"-destination-timeout", @"10",
                          @"-toolchain", @"path/to/some/toolchain",
                          @"-xcconfig", @"some.xcconfig",
                          @"-jobs", @"20",
@@ -289,6 +338,26 @@
 {
   NSArray *arguments = @[@"-project", @"path/to/Something.xcodeproj",
                          @"-scheme", @"Something",
+                         ];
+  Options *action = [Options optionsFrom:arguments];
+  assertThat([action xcodeBuildArgumentsForSubject], equalTo(arguments));
+}
+
+- (void)testXcodeBuildArgumentsForWorkspaceAndSchemeSubjectWithDerivedData
+{
+  NSArray *arguments = @[@"-workspace", @"path/to/Something.xcworkspace",
+                         @"-scheme", @"Something",
+                         @"-derivedDataPath", @"path/to/deriveddata"
+                         ];
+  Options *action = [Options optionsFrom:arguments];
+  assertThat([action xcodeBuildArgumentsForSubject], equalTo(arguments));
+}
+
+- (void)testXcodeBuildArgumentsForProjectAndSchemeSubjectWithDerivedData
+{
+  NSArray *arguments = @[@"-project", @"path/to/Something.xcodeproj",
+                         @"-scheme", @"Something",
+                         @"-derivedDataPath", @"path/to/deriveddata"
                          ];
   Options *action = [Options optionsFrom:arguments];
   assertThat([action xcodeBuildArgumentsForSubject], equalTo(arguments));
@@ -326,8 +395,8 @@
 
 - (void)testHelpOptionSetsPrintUsage
 {
-  assertThatBool([Options optionsFrom:@[@"-help"]].showHelp, equalToBool(YES));
-  assertThatBool([Options optionsFrom:@[@"-h"]].showHelp, equalToBool(YES));
+  assertThatBool([Options optionsFrom:@[@"-help"]].showHelp, isTrue());
+  assertThatBool([Options optionsFrom:@[@"-h"]].showHelp, isTrue());
 }
 
 - (void)testActionsAreRecorded
@@ -335,7 +404,7 @@
   NSArray *(^classNamesFromArray)(NSArray *) = ^(NSArray *arr){
     NSMutableArray *result = [NSMutableArray array];
     for (id item in arr) {
-      [result addObject:[NSString stringWithUTF8String:class_getName([item class])]];
+      [result addObject:@(class_getName([item class]))];
     }
     return result;
   };
@@ -365,8 +434,49 @@
 
   assertThatInteger(options.actions.count, equalToInteger(1));
   Action *action = options.actions[0];
-  NSString *actionClassName = [NSString stringWithUTF8String:class_getName([action class])];
+  NSString *actionClassName = @(class_getName([action class]));
   assertThat(actionClassName, equalTo(@"BuildAction"));
 }
 
+- (void)testBuildOnlyProjectFoundIfNoProjectSpecified
+{
+  Options *options = [Options optionsFrom:@[@"-scheme", @"TestProject-Library",
+                                             ]];
+  options.findProjectPath = [[[NSFileManager defaultManager] currentDirectoryPath]
+                             stringByAppendingPathComponent:@"xctool-tests/TestData/TestProject-Library"];
+
+  [options assertOptionsValidateWithBuildSettingsFromFile:
+                      TEST_DATA @"TestProject-Library-TestProject-Library-showBuildSettings.txt"
+                      ];
+
+  assertThatInteger(options.actions.count, equalToInteger(1));
+  Action *action = options.actions[0];
+  NSString *actionClassName = @(class_getName([action class]));
+  assertThat(actionClassName, equalTo(@"BuildAction"));
+}
+
+- (void)testDirectoryMustNotContainMultipleProjectsIfNoProjectSpecified
+{
+  Options *options = [Options optionsFrom:@[@"-scheme", @"TestMultipleProjectsInDirectory1",
+                                            ]];
+  options.findProjectPath = [[[NSFileManager defaultManager] currentDirectoryPath]
+                             stringByAppendingPathComponent:@"xctool-tests/TestData/TestMultipleProjectsInDirectory"];
+
+  [options assertOptionsFailToValidateWithError:
+   [NSString stringWithFormat:@"The directory %@ contains 2 projects, including multiple projects with the current "
+    "extension (.xcodeproj). Please specify with -workspace, -project, or -find-target.",
+    options.findProjectPath]];
+}
+
+- (void)testProjectOrWorkspaceRequiredIfNoProjectSpecifiedOrFound
+{
+  Options *options = [Options optionsFrom:@[@"-scheme", @"TestProject-Library",
+                                            ]];
+  options.findProjectPath = [[[NSFileManager defaultManager] currentDirectoryPath]
+                             stringByAppendingPathComponent:@"xctool-tests/TestData/TestWorkspace-Library"];
+
+  [options assertOptionsFailToValidateWithError:
+   [NSString stringWithFormat:@"Unable to find projects (.xcodeproj) in directory %@. Please specify with -workspace, -project, or -find-target.",
+    options.findProjectPath]];
+}
 @end
