@@ -266,12 +266,6 @@ static BOOL areEqualJsonOutputsIgnoringKeys(NSString *output1, NSString *output2
 
 - (void)testRunTestsAction
 {
-  if (ToolchainIsXcode7OrBetter()) {
-    // octest isn't supported in Xcode 7
-    // TODO: Rewrite test to test xctest bundles.
-    return;
-  }
-
   NSArray *testList = @[@"TestProject_LibraryTests/testOutputMerging",
                         @"TestProject_LibraryTests/testPrintSDK",
                         @"TestProject_LibraryTests/testStream",
@@ -337,14 +331,23 @@ static BOOL areEqualJsonOutputsIgnoringKeys(NSString *output1, NSString *output2
                        @"-showBuildSettings",
                        ]));
     assertThat([launchedTasks[0] environment][@"SHOW_ONLY_BUILD_SETTINGS_FOR_TARGET"], equalTo(@"TestProject-LibraryTests"));
-    assertThat([launchedTasks[1] arguments],
-               containsArray(@[
-                               @"-NSTreatUnknownArgumentsAsOpen", @"NO",
-                               @"-ApplePersistenceIgnoreState", @"YES",
-                               @"-SenTestInvertScope", @"YES",
-                               @"-SenTest", @"",
-                               @"/Users/nekto/Library/Developer/Xcode/DerivedData/TestProject-Library-frruszglismbfoceinskphldzhci/Build/Products/Debug-iphonesimulator/TestProject-LibraryTests.octest",
-                               ]));
+
+    NSMutableArray *expectedArguments = [@[
+      @"-NSTreatUnknownArgumentsAsOpen", @"NO",
+      @"-ApplePersistenceIgnoreState", @"YES",
+    ] mutableCopy];
+    if (!ToolchainIsXcode7OrBetter()) {
+      [expectedArguments addObjectsFromArray:@[
+        @"-XCTestInvertScope", @"YES",
+        @"-XCTest", @"",
+        @"/Users/nekto/Library/Developer/Xcode/DerivedData/TestProject-Library-frruszglismbfoceinskphldzhci/Build/Products/Debug-iphonesimulator/TestProject-LibraryTests.xctest",
+      ]];
+    }
+    assertThat([launchedTasks[1] arguments], containsArray(expectedArguments));
+    if (ToolchainIsXcode7OrBetter()) {
+      assertThat([launchedTasks[1] environment][@"SIMCTL_CHILD_XCTestConfigurationFilePath"], notNilValue());
+    }
+
     assertThatInt(tool.exitStatus, equalToInt(1));
   }];
 }
@@ -478,14 +481,24 @@ static BOOL areEqualJsonOutputsIgnoringKeys(NSString *output1, NSString *output2
   }];
 }
 
+- (void)testCanRunTestsWithCustomMethodNames
+{
+  XCTool *tool = [[XCTool alloc] init];
+
+  tool.arguments = @[@"-sdk", @"macosx",
+                     @"run-tests",
+                     @"-logicTest", TEST_DATA @"tests-osx-test-bundle/TestProject-Library-XCTest-CustomTests.xctest"
+                     ];
+
+  NSDictionary *output = [TestUtil runWithFakeStreams:tool];
+  assertThatInt(tool.exitStatus, equalToInt(0));
+  assertThat(output[@"stdout"], containsString(@"-[TestProject_Library_XCTest_CustomTests customTest]"));
+  assertThat(output[@"stdout"], containsString(@"-[TestProject_Library_XCTest_CustomTests customTestWithInteger:]"));
+  assertThat(output[@"stdout"], containsString(@"SUCCEEDED"));
+}
+
 - (void)testCanRunTestsAgainstDifferentTestSDK
 {
-  if (ToolchainIsXcode7OrBetter()) {
-    // octest isn't supported in Xcode 7
-    // TODO: Rewrite test to test xctest bundles.
-    return;
-  }
-
   NSArray *testList = @[@"TestProject_LibraryTests/testBacktraceOutputIsCaptured",
                         @"TestProject_LibraryTests/testOutputMerging",
                         @"TestProject_LibraryTests/testPrintSDK",
@@ -554,26 +567,27 @@ static BOOL areEqualJsonOutputsIgnoringKeys(NSString *output1, NSString *output2
                        @"-showBuildSettings",
                        ]));
     assertThat([launchedTasks[0] environment][@"SHOW_ONLY_BUILD_SETTINGS_FOR_TARGET"], equalTo(@"TestProject-LibraryTests"));
-    assertThat([launchedTasks[1] arguments],
-               containsArray(@[
-                               @"-NSTreatUnknownArgumentsAsOpen", @"NO",
-                               @"-ApplePersistenceIgnoreState", @"YES",
-                               @"-SenTestInvertScope", @"YES",
-                               @"-SenTest", @"",
-                               @"/Users/nekto/Library/Developer/Xcode/DerivedData/TestProject-Library-frruszglismbfoceinskphldzhci/Build/Products/Debug-iphonesimulator/TestProject-LibraryTests.octest",
-                               ]));
+    NSMutableArray *expectedArguments = [@[
+      @"-NSTreatUnknownArgumentsAsOpen", @"NO",
+      @"-ApplePersistenceIgnoreState", @"YES",
+    ] mutableCopy];
+    if (!ToolchainIsXcode7OrBetter()) {
+      [expectedArguments addObjectsFromArray:@[
+        @"-XCTestInvertScope", @"YES",
+        @"-XCTest", @"",
+        @"/Users/nekto/Library/Developer/Xcode/DerivedData/TestProject-Library-frruszglismbfoceinskphldzhci/Build/Products/Debug-iphonesimulator/TestProject-LibraryTests.xctest"
+      ]];
+    }
+    assertThat([launchedTasks[1] arguments], containsArray(expectedArguments));
+    if (ToolchainIsXcode7OrBetter()) {
+      assertThat([launchedTasks[1] environment][@"SIMCTL_CHILD_XCTestConfigurationFilePath"], notNilValue());
+    }
     assertThatInt(tool.exitStatus, equalToInt(1));
   }];
 }
 
 - (void)testCanSelectSpecificTestClassOrTestMethodsWithOnlyAndOmit
 {
-  if (ToolchainIsXcode7OrBetter()) {
-    // octest isn't supported in Xcode 7
-    // TODO: Rewrite test to test xctest bundles.
-    return;
-  }
-
   NSArray *testList = @[@"OtherTests/testSomething",
                         @"SomeTests/testBacktraceOutputIsCaptured",
                         @"SomeTests/testOutputMerging",
@@ -627,20 +641,23 @@ static BOOL areEqualJsonOutputsIgnoringKeys(NSString *output1, NSString *output2
         assertThatInteger([launchedTasks count], equalToInteger(0));
       } else {
         assertThatInteger([launchedTasks count], equalToInteger(2));
-        NSArray *arguments = [launchedTasks[1] arguments];
-        assertThat(arguments, containsArray(@[
-                                              @"-NSTreatUnknownArgumentsAsOpen", @"NO",
-                                              @"-ApplePersistenceIgnoreState", @"YES",
-                                              @"-SenTestInvertScope", @"YES"]));
-        assertThat(arguments, containsArray(@[@"-OTEST_TESTLIST_FILE"]));
-        assertThat(arguments, containsArray(@[
-                                              @"-OTEST_FILTER_TEST_ARGS_KEY", @"SenTest",
-                                              @"-SenTest", @"XCTOOL_FAKE_LIST_OF_TESTS",
-                                              ]));
-        
-        assertThat(arguments, containsArray(@[
-                                              @"/Users/nekto/Library/Developer/Xcode/DerivedData/TestProject-Library-frruszglismbfoceinskphldzhci/Build/Products/Debug-iphonesimulator/TestProject-LibraryTests.octest",
-                                              ]));
+        NSMutableArray *expectedArguments = [@[
+          @"-NSTreatUnknownArgumentsAsOpen", @"NO",
+          @"-ApplePersistenceIgnoreState", @"YES",
+        ] mutableCopy];
+        if (!ToolchainIsXcode7OrBetter()) {
+          [expectedArguments addObjectsFromArray:@[
+            @"-XCTestInvertScope", @"YES",
+            @"-XCTestScopeFile",
+          ]];
+        }
+        assertThat([launchedTasks[1] arguments], containsArray(expectedArguments));
+        if (!ToolchainIsXcode7OrBetter()) {
+          assertThat([[launchedTasks[1] arguments] lastObject], is(@"/Users/nekto/Library/Developer/Xcode/DerivedData/TestProject-Library-frruszglismbfoceinskphldzhci/Build/Products/Debug-iphonesimulator/TestProject-LibraryTests.xctest"));
+        }
+        if (ToolchainIsXcode7OrBetter()) {
+          assertThat([launchedTasks[1] environment][@"SIMCTL_CHILD_XCTestConfigurationFilePath"], notNilValue());
+        }
       }
     }];
   };
@@ -1063,7 +1080,7 @@ static BOOL areEqualJsonOutputsIgnoringKeys(NSString *output1, NSString *output2
                               @"-sdk", @"iphonesimulator6.1",
                               @"run-tests",
                               @"-appTest",
-                              TEST_DATA @"TestProject-App-OSX/Build/Products/Debug/TestProject-App-OSXTests.octest:"
+                              TEST_DATA @"TestProject-App-OSX/Build/Products/Debug/TestProject-App-OSXTests.xctest:"
                               TEST_DATA @"TestProject-App-OSX/Build/Products/Debug/TestProject-App-OSX.app/Contents/MacOS/TestProject-App-OSX",
             ]] assertOptionsValidate];
       id testRunning = options.actions[0];
@@ -1111,7 +1128,7 @@ static BOOL areEqualJsonOutputsIgnoringKeys(NSString *output1, NSString *output2
                               @"-sdk", @"macosx10.7",
                               @"run-tests",
                               @"-appTest",
-                              TEST_DATA @"TestProject-App-OSX/Build/Products/Debug/TestProject-App-OSXTests.octest:"
+                              TEST_DATA @"TestProject-App-OSX/Build/Products/Debug/TestProject-App-OSXTests.xctest:"
                               TEST_DATA @"TestProject-App-OSX/Build/Products/Debug/TestProject-App-OSX.app/Contents/MacOS/TestProject-App-OSX",
 
             ]] assertOptionsValidate];
@@ -1120,7 +1137,7 @@ static BOOL areEqualJsonOutputsIgnoringKeys(NSString *output1, NSString *output2
         action.appTests,
         equalTo(
           @{
-            TEST_DATA @"TestProject-App-OSX/Build/Products/Debug/TestProject-App-OSXTests.octest" :
+            TEST_DATA @"TestProject-App-OSX/Build/Products/Debug/TestProject-App-OSXTests.xctest" :
               TEST_DATA @"TestProject-App-OSX/Build/Products/Debug/TestProject-App-OSX.app/Contents/MacOS/TestProject-App-OSX",
            }));
   }];
@@ -1133,7 +1150,7 @@ static BOOL areEqualJsonOutputsIgnoringKeys(NSString *output1, NSString *output2
                               @"-sdk", @"macosx10.7",
                               @"run-tests",
                               @"-appTest",
-                              TEST_DATA @"TestProject-App-OSX/Build/Products/Debug/TestProject-App-OSXTests.octest:"
+                              TEST_DATA @"TestProject-App-OSX/Build/Products/Debug/TestProject-App-OSXTests.xctest:"
                               TEST_DATA @"TestProject-App-OSX/Build/Products/Debug/TestProject-App-OSX.app/Contents/MacOS/TestProject-App-OSX",
                               @"-appTest",
                               TEST_DATA @"KiwiTests/Build/Products/Debug-iphonesimulator/KiwiTests-OCUnit-AppTests.octest:"
@@ -1144,7 +1161,7 @@ static BOOL areEqualJsonOutputsIgnoringKeys(NSString *output1, NSString *output2
         action.appTests,
         equalTo(
           @{
-            TEST_DATA @"TestProject-App-OSX/Build/Products/Debug/TestProject-App-OSXTests.octest" :
+            TEST_DATA @"TestProject-App-OSX/Build/Products/Debug/TestProject-App-OSXTests.xctest" :
               TEST_DATA @"TestProject-App-OSX/Build/Products/Debug/TestProject-App-OSX.app/Contents/MacOS/TestProject-App-OSX",
             TEST_DATA @"KiwiTests/Build/Products/Debug-iphonesimulator/KiwiTests-OCUnit-AppTests.octest" :
               TEST_DATA @"KiwiTests/Build/Products/Debug-iphonesimulator/KiwiTests-TestHost.app/KiwiTests-TestHost",
@@ -1160,7 +1177,7 @@ static BOOL areEqualJsonOutputsIgnoringKeys(NSString *output1, NSString *output2
                               @"run-tests",
                               @"-logicTest", TEST_DATA @"tests-ios-test-bundle/TestProject-LibraryTests.octest",
                               @"-appTest",
-                              TEST_DATA @"TestProject-App-OSX/Build/Products/Debug/TestProject-App-OSXTests.octest:"
+                              TEST_DATA @"TestProject-App-OSX/Build/Products/Debug/TestProject-App-OSXTests.xctest:"
                               TEST_DATA @"TestProject-App-OSX/Build/Products/Debug/TestProject-App-OSX.app/Contents/MacOS/TestProject-App-OSX",
                               @"-logicTest", TEST_DATA @"tests-ios-test-bundle/SenTestingKit_Assertion.octest",
                               @"-appTest",
@@ -1178,7 +1195,7 @@ static BOOL areEqualJsonOutputsIgnoringKeys(NSString *output1, NSString *output2
         action.appTests,
         equalTo(
           @{
-            TEST_DATA @"TestProject-App-OSX/Build/Products/Debug/TestProject-App-OSXTests.octest" :
+            TEST_DATA @"TestProject-App-OSX/Build/Products/Debug/TestProject-App-OSXTests.xctest" :
               TEST_DATA @"TestProject-App-OSX/Build/Products/Debug/TestProject-App-OSX.app/Contents/MacOS/TestProject-App-OSX",
             TEST_DATA @"KiwiTests/Build/Products/Debug-iphonesimulator/KiwiTests-OCUnit-AppTests.octest" :
               TEST_DATA @"KiwiTests/Build/Products/Debug-iphonesimulator/KiwiTests-TestHost.app/KiwiTests-TestHost",
@@ -1235,13 +1252,13 @@ static BOOL areEqualJsonOutputsIgnoringKeys(NSString *output1, NSString *output2
       [[Options optionsFrom:@[
                               @"-sdk", @"iphonesimulator6.1",
                               @"run-tests",
-                              @"-appTest", TEST_DATA @"TestProject-App-OSX/Build/Products/Debug/TestProject-App-OSXTests.octest:"
+                              @"-appTest", TEST_DATA @"TestProject-App-OSX/Build/Products/Debug/TestProject-App-OSXTests.xctest:"
                                 TEST_DATA @"TestProject-App-OSX/Build/Products/Debug/TestProject-App-OSX.app/Contents/MacOS/TestProject-App-OSX",
-                              @"-appTest", TEST_DATA @"TestProject-App-OSX/Build/Products/Debug/TestProject-App-OSXTests.octest:"
+                              @"-appTest", TEST_DATA @"TestProject-App-OSX/Build/Products/Debug/TestProject-App-OSXTests.xctest:"
                                 TEST_DATA @"TestProject-App-OSX/Build/Products/Debug/TestProject-App-OSX.app/Contents/MacOS/TestProject-App-OSX",
                               ]]
        assertOptionsFailToValidateWithError:
-           @"run-tests: The same test bundle '"TEST_DATA @"TestProject-App-OSX/Build/Products/Debug/TestProject-App-OSXTests.octest' cannot test "
+           @"run-tests: The same test bundle '"TEST_DATA @"TestProject-App-OSX/Build/Products/Debug/TestProject-App-OSXTests.xctest' cannot test "
            @"more than one test host app (got '"TEST_DATA @"TestProject-App-OSX/Build/Products/Debug/TestProject-App-OSX.app/Contents/MacOS/TestProject-App-OSX' and '" TEST_DATA @"TestProject-App-OSX/Build/Products/Debug/TestProject-App-OSX.app/Contents/MacOS/TestProject-App-OSX')"];
   }];
 }
@@ -1399,7 +1416,7 @@ static BOOL areEqualJsonOutputsIgnoringKeys(NSString *output1, NSString *output2
     tool.arguments = @[@"-sdk", @"macosx10.8",
                        @"run-tests",
                        @"-appTest",
-                       TEST_DATA @"TestProject-App-OSX/Build/Products/Debug/TestProject-App-OSXTests.octest:" TEST_DATA @"TestProject-App-OSX/Build/Products/Debug/TestProject-App-OSX.app/Contents/MacOS/TestProject-App-OSX",
+                       TEST_DATA @"TestProject-App-OSX/Build/Products/Debug/TestProject-App-OSXTests.xctest:" TEST_DATA @"TestProject-App-OSX/Build/Products/Debug/TestProject-App-OSX.app/Contents/MacOS/TestProject-App-OSX",
                        ];
 
     __block OCUnitTestRunner *runner = nil;
@@ -1588,7 +1605,7 @@ static BOOL areEqualJsonOutputsIgnoringKeys(NSString *output1, NSString *output2
     tool.arguments = @[@"-sdk", @"macosx10.8",
                        @"run-tests",
                        @"-appTest",
-                       TEST_DATA @"TestProject-App-OSX/Build/Products/Debug/TestProject-App-OSXTests.octest:" TEST_DATA @"TestProject-App-OSX/Build/Products/Debug/TestProject-App-OSX.app/Contents/MacOS/TestProject-App-OSX",
+                       TEST_DATA @"TestProject-App-OSX/Build/Products/Debug/TestProject-App-OSXTests.xctest:" TEST_DATA @"TestProject-App-OSX/Build/Products/Debug/TestProject-App-OSX.app/Contents/MacOS/TestProject-App-OSX",
                        ];
 
     __block OCUnitTestRunner *runner = nil;
@@ -1607,7 +1624,7 @@ static BOOL areEqualJsonOutputsIgnoringKeys(NSString *output1, NSString *output2
        [TestUtil runWithFakeStreams:tool];
 
        assertThat(runner, notNilValue());
-       assertThat([runner.simulatorInfo productBundlePath], equalTo(TEST_DATA @"TestProject-App-OSX/Build/Products/Debug/TestProject-App-OSXTests.octest"));
+       assertThat([runner.simulatorInfo productBundlePath], equalTo(TEST_DATA @"TestProject-App-OSX/Build/Products/Debug/TestProject-App-OSXTests.xctest"));
      }];
   }];
 }

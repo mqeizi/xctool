@@ -328,6 +328,15 @@ NSDictionary *GetAvailableSDKsAndAliases()
   return GetAvailableSDKsAndAliasesWithSDKInfo(sdkInfo);
 }
 
+BOOL IsRunningOnCISystem()
+{
+  NSDictionary *environment = [[NSProcessInfo processInfo] environment];
+  return ([environment[@"TRAVIS"] isEqualToString:@"true"] ||
+          [environment[@"CIRCLECI"] isEqualToString:@"true"] ||
+          [environment[@"JENKINS_URL"] length] > 0 ||
+          [environment[@"TEAMCITY_VERSION"] length] > 0);
+}
+
 BOOL IsRunningUnderTest()
 {
   NSString *processName = [[NSProcessInfo processInfo] processName];
@@ -356,7 +365,7 @@ BOOL LaunchXcodebuildTaskAndFeedEventsToReporters(NSTask *task,
               line,
               [error localizedFailureReason]);
 
-    NSString *eventName = event[@"event"];
+    NSString *eventName = event[kReporter_Event_Key];
 
     if ([eventName isEqualToString:@"__xcodebuild-error__"]) {
       // xcodebuild-shim will generate this special event if it sees that

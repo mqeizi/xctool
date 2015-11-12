@@ -103,10 +103,8 @@ static NSTask *OtestShimTask(NSString *platformName,
   // the latest available SDK.
   targetSettings[Xcode_SDK_NAME] = GetAvailableSDKsAndAliases()[[platformName lowercaseString]];
 
-  if (ToolchainIsXcode7OrBetter()) {
-    targetSettings[Xcode_BUILT_PRODUCTS_DIR] = [bundlePath stringByDeletingLastPathComponent];
-    targetSettings[Xcode_FULL_PRODUCT_NAME] = [bundlePath lastPathComponent];
-  }
+  targetSettings[Xcode_BUILT_PRODUCTS_DIR] = [bundlePath stringByDeletingLastPathComponent];
+  targetSettings[Xcode_FULL_PRODUCT_NAME] = [bundlePath lastPathComponent];
 
   // set up an OCUnitIOSLogicTestRunner
   OCUnitIOSLogicTestRunner *runner = [[testRunnerClass alloc] initWithBuildSettings:targetSettings
@@ -120,7 +118,8 @@ static NSTask *OtestShimTask(NSString *platformName,
                                                           noResetSimulatorOnFailure:NO
                                                                        freshInstall:NO
                                                                         testTimeout:1
-                                                                          reporters:@[]];
+                                                                          reporters:@[]
+                                                                 processEnvironment:@{}];
   NSTask *task = [runner otestTaskWithTestBundle: bundlePath];
 
   // Make sure launch path is accessible.
@@ -361,13 +360,7 @@ static NSDictionary *ExtractEvent(NSArray *events, NSString *eventType)
 
 - (void)testOutputBeforeTestBundleStartsIsCaptured
 {
-  if (ToolchainIsXcode7OrBetter()) {
-    // octest isn't supported in Xcode 7
-    // TODO: Rewrite test to test xctest bundles.
-    return;
-  }
-
-  NSString *bundlePath = TEST_DATA @"TestThatThrowsExceptionOnStart/Build/Products/Debug/TestThatThrowsExceptionOnStart.octest";
+  NSString *bundlePath = TEST_DATA @"TestThatThrowsExceptionOnStart/Build/Products/Debug/TestThatThrowsExceptionOnStart.xctest";
   NSString *targetName = @"TestThatThrowsExceptionOnStart";
   NSString *settingsPath = TEST_DATA @"TestThatThrowsExceptionOnStart/TestThatThrowsExceptionOnStart-showBuildSettings.txt";
   NSArray *testList = @[ @"TestThatThrowsExceptionOnStart/testExample" ];
@@ -376,10 +369,9 @@ static NSDictionary *ExtractEvent(NSArray *events, NSString *eventType)
   NSTask *task = OtestShimTaskOSX(settingsPath, targetName, bundlePath, testList, allTests);
   NSArray *events = RunOtestAndParseResult(task);
 
-  NSString *output = [SelectEventFields(events, kReporter_Events_OutputBeforeTestBundleStarts, kReporter_OutputBeforeTestBundleStarts_OutputKey)
-                      componentsJoinedByString:@""];
-
-  assertThat(output, containsString(@"Terminating app due to uncaught exception"));
+  assertThat(events, hasCountOf(2));
+  assertThat(events[0][@"event"], is(kReporter_Events_BeginTestSuite));
+  assertThat(events[1][@"event"], is(kReporter_Events_EndTestSuite));
 }
 
 - (void)testSenTestingKitExceptionIsThrownWhenTestTimeoutIsHit

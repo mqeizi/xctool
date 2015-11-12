@@ -351,7 +351,7 @@ NSArray *BucketizeTestCasesByTestClass(NSArray *testCases, int bucketSize)
 
 - (void)addLogicTest:(NSString *)argument
 {
-  [_logicTests addObject:argument];
+  [_logicTests addObject:[argument stringByStandardizingPath]];
 }
 
 - (void)addAppTest:(NSString *)argument
@@ -444,6 +444,10 @@ NSArray *BucketizeTestCasesByTestClass(NSArray *testCases, int bucketSize)
     }
     [_simulatorInfo setDeviceName:destInfo[@"name"]];
     [_simulatorInfo setOSVersion:destInfo[@"OS"]];
+    if (destInfo[@"id"] != nil) {
+      NSUUID *udid = [[NSUUID alloc] initWithUUIDString:destInfo[@"id"]];
+      [_simulatorInfo setDeviceUDID:udid];
+    }
   }
 
   for (NSString *logicTestPath in _logicTests) {
@@ -461,8 +465,8 @@ NSArray *BucketizeTestCasesByTestClass(NSArray *testCases, int bucketSize)
       return NO;
     }
 
-    NSString *testBundle = [rawAppTestArg substringToIndex:colonRange.location];
-    NSString *hostApp = [rawAppTestArg substringFromIndex:colonRange.location + 1];
+    NSString *testBundle = [[rawAppTestArg substringToIndex:colonRange.location] stringByStandardizingPath];
+    NSString *hostApp = [[rawAppTestArg substringFromIndex:colonRange.location + 1] stringByStandardizingPath];
     NSString *existingHostAppForTestBundle = _appTests[testBundle];
 
     if (existingHostAppForTestBundle) {
@@ -676,7 +680,8 @@ typedef BOOL (^TestableBlock)(NSArray *reporters);
                                                         noResetSimulatorOnFailure:_noResetSimulatorOnFailure
                                                                      freshInstall:_freshInstall
                                                                       testTimeout:_testTimeout
-                                                                        reporters:reporters];
+                                                                        reporters:reporters
+                                                               processEnvironment:[[NSProcessInfo processInfo] environment]];
 
     PublishEventToReporters(reporters,
                             [[self class] eventForBeginOCUnitFromTestableExecutionInfo:testableExecutionInfo action:self]);
