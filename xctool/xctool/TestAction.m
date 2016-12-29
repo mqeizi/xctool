@@ -18,7 +18,9 @@
 #import "TestActionInternal.h"
 
 #import "BuildTestsAction.h"
+#import "Options.h"
 #import "RunTestsAction.h"
+#import "XCToolUtil.h"
 
 @interface TestAction ()
 
@@ -69,6 +71,11 @@
                      description:
      @"Reset simulator content and settings and restart it before running every app test run."
                          setFlag:@selector(setResetSimulator:)],
+    [Action actionOptionWithName:@"newSimulatorInstance"
+                         aliases:nil
+                     description:
+     @"Create new simulator instance for each application test target"
+                         setFlag:@selector(setNewSimulatorInstance:)],
     [Action actionOptionWithName:@"noResetSimulatorOnFailure"
                          aliases:nil
                      description:
@@ -106,6 +113,10 @@
                          aliases:nil
                      description:@"Skip actual test running and list them only."
                          setFlag:@selector(setListTestsOnly:)],
+    [Action actionOptionWithName:@"waitForDebugger"
+                         aliases:nil
+                     description:@"Spawn tests but wait for debugger to attach."
+                         setFlag:@selector(setWaitForDebugger:)],
     [Action actionOptionWithName:@"testTimeout"
                          aliases:nil
                      description:
@@ -139,6 +150,11 @@
   [_runTestsAction setResetSimulator:resetSimulator];
 }
 
+- (void)setNewSimulatorInstance:(BOOL)newSimulatorInstance
+{
+  [_runTestsAction setNewSimulatorInstance:newSimulatorInstance];
+}
+
 - (void)setNoResetSimulatorOnFailure:(BOOL)noResetSimulatorOnFailure
 {
   [_runTestsAction setNoResetSimulatorOnFailure:noResetSimulatorOnFailure];
@@ -147,6 +163,11 @@
 - (void)setFreshInstall:(BOOL)freshInstall
 {
   [_runTestsAction setFreshInstall:freshInstall];
+}
+
+- (void)setWaitForDebugger:(BOOL)waitForDebugger
+{
+  [_runTestsAction setWaitForDebugger:waitForDebugger];
 }
 
 - (void)setParallelize:(BOOL)parallelize

@@ -54,11 +54,13 @@ typedef NS_ENUM(NSInteger, BucketBy) {
 
 @property (nonatomic, assign) BOOL freshSimulator;
 @property (nonatomic, assign) BOOL resetSimulator;
+@property (nonatomic, assign) BOOL newSimulatorInstance;
 @property (nonatomic, assign) BOOL noResetSimulatorOnFailure;
 @property (nonatomic, assign) BOOL freshInstall;
 @property (nonatomic, assign) BOOL parallelize;
 @property (nonatomic, assign) BOOL failOnEmptyTestBundles;
 @property (nonatomic, assign) BOOL listTestsOnly;
+@property (nonatomic, assign) BOOL waitForDebugger;
 @property (nonatomic, copy) NSString *testSDK;
 @property (nonatomic, strong) NSMutableArray *onlyList;
 @property (nonatomic, strong) NSMutableArray *omitList;

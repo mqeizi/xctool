@@ -19,6 +19,8 @@
 #import <objc/message.h>
 #import <objc/runtime.h>
 
+#import "ReportStatus.h"
+
 @class Options;
 
 @implementation Action

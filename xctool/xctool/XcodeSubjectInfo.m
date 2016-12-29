@@ -700,23 +700,12 @@ containsFilesModifiedSince:(NSDate *)sinceDate
       [testsToSkip addObject:test];
     }
 
-    NSString *senTestList = nil;
-    BOOL senTestInvertScope = NO;
-    if (testsToSkip.count > 0) {
-      senTestList = [testsToSkip componentsJoinedByString:@","];
-      senTestInvertScope = YES;
-    } else {
-      senTestList = @"All";
-      senTestInvertScope = NO;
-    }
-
     Testable *testable = [[Testable alloc] init];
     testable.projectPath = projectPath;
     testable.target = target;
     testable.targetID = targetID;
     testable.executable = executable;
-    testable.senTestInvertScope = senTestInvertScope;
-    testable.senTestList = senTestList;
+    testable.skippedTests = testsToSkip;
     testable.skipped = skipped;
     testable.arguments = argumentsAndEnvironment[@"arguments"];
     testable.environment = argumentsAndEnvironment[@"environment"];
@@ -835,8 +824,9 @@ containsFilesModifiedSince:(NSDate *)sinceDate
     NSString *error = nil;
     NSDictionary *settings = buildSettingsWithAction(action, &error);
 
-    if (settings.count == 1) {
-      return settings;
+    if (settings.count >= 1) {
+      NSArray *keys = [settings allKeys];
+      return @{keys[0]: settings[keys[0]]};
     }
 
     if (error) {

@@ -46,7 +46,6 @@
 
 - (BOOL)performActionWithOptions:(Options *)options xcodeSubjectInfo:(XcodeSubjectInfo *)xcodeSubjectInfo
 {
-
   [xcodeSubjectInfo.actionScripts preBuildWithOptions:options];
 
   NSArray *arguments = [self xcodebuildArgumentsForActionWithOptions:options xcodeSubjectInfo:xcodeSubjectInfo];

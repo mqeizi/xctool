@@ -207,28 +207,17 @@
    TEST_DATA @"TestWorkspace-Library-TestProject-Library-showBuildSettings.txt"];
 }
 
-- (void)testResultBundlePathMustBeADirectory
+- (void)testResultBundlePathMustNotExist
 {
-  NSString *validFilePath = TEST_DATA @"TestWorkspace-Library-TestProject-Library-showBuildSettings.txt";
+  NSString *existingFilePath = TEST_DATA @"TestWorkspace-Library-TestProject-Library-showBuildSettings.txt";
+  assertThatBool([[NSFileManager defaultManager] fileExistsAtPath:existingFilePath], isTrue());
   [[Options optionsFrom:@[
                           @"-scheme", @"TestProject-Library",
                           @"-workspace", TEST_DATA @"TestWorkspace-Library/TestWorkspace-Library.xcworkspace",
-                          @"-resultBundlePath", validFilePath,
+                          @"-resultBundlePath", existingFilePath,
                           ]]
    assertOptionsFailToValidateWithError:
-   [NSString stringWithFormat:@"Specified result bundle path must be a directory: %@", validFilePath]];
-}
-
-- (void)testResultBundlePathMustExist
-{
-  NSString *invalidResultBundlePath = @"SOME_BAD_PATH";
-  [[Options optionsFrom:@[
-                          @"-scheme", @"TestProject-Library",
-                          @"-workspace", TEST_DATA @"TestWorkspace-Library/TestWorkspace-Library.xcworkspace",
-                          @"-resultBundlePath", invalidResultBundlePath,
-                          ]]
-   assertOptionsFailToValidateWithError:
-   [NSString stringWithFormat:@"Specified result bundle path doesn't exist: %@", invalidResultBundlePath]];
+   [NSString stringWithFormat:@"Specified result bundle path already exists: %@", existingFilePath]];
 }
 
 - (void)testResultBundlePathWorks
@@ -401,6 +390,11 @@
 
 - (void)testActionsAreRecorded
 {
+  if (ToolchainIsXcode8OrBetter()) {
+    PrintTestNotRelevantNotice();
+    return;
+  }
+
   NSArray *(^classNamesFromArray)(NSArray *) = ^(NSArray *arr){
     NSMutableArray *result = [NSMutableArray array];
     for (id item in arr) {
@@ -423,6 +417,20 @@
                      ]));
 }
 
+- (void)testActionIsRecorded
+{
+  NSArray *(^classNamesFromArray)(NSArray *) = ^(NSArray *arr){
+    NSMutableArray *result = [NSMutableArray array];
+    for (id item in arr) {
+      [result addObject:@(class_getName([item class]))];
+    }
+    return result;
+  };
+
+  assertThat(classNamesFromArray([Options optionsFrom:@[@"run-tests"]].actions),
+             equalTo(@[@"RunTestsAction"]));
+}
+
 - (void)testDefaultActionIsBuildIfNotSpecified
 {
   Options *options = [[Options optionsFrom:@[
@@ -442,8 +450,7 @@
 {
   Options *options = [Options optionsFrom:@[@"-scheme", @"TestProject-Library",
                                              ]];
-  options.findProjectPath = [[[NSFileManager defaultManager] currentDirectoryPath]
-                             stringByAppendingPathComponent:@"xctool-tests/TestData/TestProject-Library"];
+  options.findProjectPath = TEST_DATA @"TestProject-Library";
 
   [options assertOptionsValidateWithBuildSettingsFromFile:
                       TEST_DATA @"TestProject-Library-TestProject-Library-showBuildSettings.txt"
@@ -459,8 +466,7 @@
 {
   Options *options = [Options optionsFrom:@[@"-scheme", @"TestMultipleProjectsInDirectory1",
                                             ]];
-  options.findProjectPath = [[[NSFileManager defaultManager] currentDirectoryPath]
-                             stringByAppendingPathComponent:@"xctool-tests/TestData/TestMultipleProjectsInDirectory"];
+  options.findProjectPath = TEST_DATA @"TestMultipleProjectsInDirectory";
 
   [options assertOptionsFailToValidateWithError:
    [NSString stringWithFormat:@"The directory %@ contains 2 projects, including multiple projects with the current "

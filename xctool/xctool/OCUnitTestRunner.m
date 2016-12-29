@@ -36,6 +36,7 @@ static NSString * const kEnvVarPassThroughPrefix = @"XCTOOL_TEST_ENV_";
 @property (nonatomic, assign) BOOL garbageCollection;
 @property (nonatomic, assign) BOOL freshSimulator;
 @property (nonatomic, assign) BOOL resetSimulator;
+@property (nonatomic, assign) BOOL newSimulatorInstance;
 @property (nonatomic, assign) BOOL noResetSimulatorOnFailure;
 @property (nonatomic, assign) BOOL freshInstall;
 @property (nonatomic, copy, readwrite) NSArray *reporters;
@@ -61,74 +62,79 @@ static NSString * const kEnvVarPassThroughPrefix = @"XCTOOL_TEST_ENV_";
   return resultPrefix;
 }
 
-+ (NSArray *)filterTestCases:(NSArray *)testCases
-             withSenTestList:(NSString *)senTestList
-          senTestInvertScope:(BOOL)senTestInvertScope
-                       error:(NSString **)error
++ (NSSet *)findMatches:(NSArray *)matches
+                 inSet:(NSSet *)set
+     notMatchedEntries:(NSArray **)notMatched
 {
-  NSSet *originalSet = [NSSet setWithArray:testCases];
-
-  // Come up with a set of test cases that match the senTestList pattern.
   NSMutableSet *matchingSet = [NSMutableSet set];
   NSMutableArray *notMatchedSpecifiers = [NSMutableArray array];
 
-  if ([senTestList isEqualToString:@"All"]) {
-    [matchingSet addObjectsFromArray:testCases];
-  } else if ([senTestList isEqualToString:@"None"]) {
-    // None, we don't add anything to the set.
-  } else {
-    for (NSString *specifier in [senTestList componentsSeparatedByString:@","]) {
-      BOOL matched = NO;
+  for (NSString *specifier in matches) {
+    BOOL matched = NO;
 
-      // If we have a slash, assume it's in the form of "SomeClass/testMethod"
-      BOOL hasClassAndMethod = [specifier rangeOfString:@"/"].length > 0;
-      NSString *matchingPrefix = [self wildcardPrefixFrom:specifier];
+    // If we have a slash, assume it's in the form of "SomeClass/testMethod"
+    BOOL hasClassAndMethod = [specifier rangeOfString:@"/"].length > 0;
+    NSString *matchingPrefix = [self wildcardPrefixFrom:specifier];
 
-      if (hasClassAndMethod && !matchingPrefix) {
-        // "SomeClass/testMethod"
-        // Use the set for a fast strict matching for this one test
-        if ([originalSet containsObject:specifier]) {
-          [matchingSet addObject:specifier];
+    if (hasClassAndMethod && !matchingPrefix) {
+      // "SomeClass/testMethod"
+      // Use the set for a fast strict matching for this one test
+      if ([set containsObject:specifier]) {
+        [matchingSet addObject:specifier];
+        matched = YES;
+      }
+    } else {
+      // "SomeClass", or "SomeClassPrefix*", or "SomeClass/testPrefix*"
+      if (!matchingPrefix) {
+        // Regular case - strict matching, append "/" to limit results to all tests for this one class
+        matchingPrefix = [specifier stringByAppendingString:@"/"];
+      }
+
+      for (NSString *testCase in set) {
+        if ([testCase hasPrefix:matchingPrefix]) {
+          [matchingSet addObject:testCase];
           matched = YES;
         }
-      } else {
-        // "SomeClass", or "SomeClassPrefix*", or "SomeClass/testPrefix*"
-        if (!matchingPrefix) {
-          // Regular case - strict matching, append "/" to limit results to all tests for this one class
-          matchingPrefix = [specifier stringByAppendingString:@"/"];
-        }
-
-        for (NSString *testCase in testCases) {
-          if ([testCase hasPrefix:matchingPrefix]) {
-            [matchingSet addObject:testCase];
-            matched = YES;
-          }
-        }
       }
+    }
 
-      if (!matched) {
-        [notMatchedSpecifiers addObject:specifier];
-      }
+    if (!matched) {
+      [notMatchedSpecifiers addObject:specifier];
     }
   }
 
-  if ([notMatchedSpecifiers count] && senTestInvertScope == NO) {
-    *error = [NSString stringWithFormat:@"Test cases for the following test specifiers weren't found: %@.", [notMatchedSpecifiers componentsJoinedByString:@", "]];
-    return nil;
+  if (notMatched) {
+    *notMatched = notMatchedSpecifiers;
   }
 
-  NSMutableArray *result = [NSMutableArray array];
+  return matchingSet;
+}
 
-  if (!senTestInvertScope) {
-    [result addObjectsFromArray:[matchingSet allObjects]];
++ (NSArray *)filterTestCases:(NSArray *)allTestCases
+               onlyTestCases:(NSArray *)onlyTestCases
+            skippedTestCases:(NSArray *)skippedTestCases
+                       error:(NSString **)error
+{
+  NSSet *originalSet = [NSSet setWithArray:allTestCases];
+  NSMutableSet *resultSet = [NSMutableSet set];
+  if (onlyTestCases.count > 0) {
+    NSArray *notMatchedEntries = nil;
+    NSSet *filtered = [self findMatches:onlyTestCases
+                                  inSet:originalSet
+                      notMatchedEntries:&notMatchedEntries];
+    if (notMatchedEntries.count > 0) {
+      *error = [NSString stringWithFormat:@"Test cases for the following test specifiers weren't found: %@.", [notMatchedEntries componentsJoinedByString:@", "]];
+      return nil;
+    }
+    [resultSet unionSet:filtered];
   } else {
-    NSMutableSet *invertedSet = [originalSet mutableCopy];
-    [invertedSet minusSet:matchingSet];
-    [result addObjectsFromArray:[invertedSet allObjects]];
+    [resultSet unionSet:originalSet];
   }
 
-  [result sortUsingSelector:@selector(compare:)];
-  return result;
+  NSSet *testCasesToSkip = [self findMatches:skippedTestCases inSet:resultSet notMatchedEntries:nil];
+  [resultSet minusSet:testCasesToSkip];
+
+  return [resultSet sortedArrayUsingDescriptors:@[[NSSortDescriptor sortDescriptorWithKey:@"self" ascending:YES]]];
 }
 
 - (instancetype)initWithBuildSettings:(NSDictionary *)buildSettings
@@ -139,8 +145,10 @@ static NSString * const kEnvVarPassThroughPrefix = @"XCTOOL_TEST_ENV_";
                           environment:(NSDictionary *)environment
                        freshSimulator:(BOOL)freshSimulator
                        resetSimulator:(BOOL)resetSimulator
+                 newSimulatorInstance:(BOOL)newSimulatorInstance
             noResetSimulatorOnFailure:(BOOL)noResetSimulatorOnFailure
                          freshInstall:(BOOL)freshInstall
+                      waitForDebugger:(BOOL)waitForDebugger
                           testTimeout:(NSInteger)testTimeout
                             reporters:(NSArray *)reporters
                    processEnvironment:(NSDictionary *)processEnvironment
@@ -155,8 +163,10 @@ static NSString * const kEnvVarPassThroughPrefix = @"XCTOOL_TEST_ENV_";
     _environment = [environment copy];
     _freshSimulator = freshSimulator;
     _resetSimulator = resetSimulator;
+    _newSimulatorInstance = newSimulatorInstance;
     _noResetSimulatorOnFailure = noResetSimulatorOnFailure;
     _freshInstall = freshInstall;
+    _waitForDebugger = waitForDebugger;
     _testTimeout = testTimeout;
     _reporters = [reporters copy];
     _framework = FrameworkInfoForTestBundleAtPath([_simulatorInfo productBundlePath]);
@@ -166,7 +176,7 @@ static NSString * const kEnvVarPassThroughPrefix = @"XCTOOL_TEST_ENV_";
 }
 
 
-- (void)runTestsAndFeedOutputTo:(void (^)(NSString *))outputLineBlock
+- (void)runTestsAndFeedOutputTo:(FdOutputLineFeedBlock)outputLineBlock
                    startupError:(NSString **)startupError
                     otherErrors:(NSString **)otherErrors
 {
@@ -187,7 +197,7 @@ static NSString * const kEnvVarPassThroughPrefix = @"XCTOOL_TEST_ENV_";
       testRunState = [[TestRunState alloc] initWithTestSuiteEventState:testSuiteState];
     }
 
-    void (^feedOutputToBlock)(NSString *) = ^(NSString *line) {
+    FdOutputLineFeedBlock feedOutputToBlock = ^(int fd, NSString *line) {
       [testRunState parseAndHandleEvent:line];
     };
 
@@ -386,6 +396,10 @@ static NSString * const kEnvVarPassThroughPrefix = @"XCTOOL_TEST_ENV_";
   NSMutableDictionary *internalEnvironment = [NSMutableDictionary dictionary];
   if (_testTimeout > 0) {
     internalEnvironment[@"OTEST_SHIM_TEST_TIMEOUT"] = [@(_testTimeout) stringValue];
+  }
+
+  if (_waitForDebugger) {
+    internalEnvironment[@"XCTOOL_WAIT_FOR_DEBUGGER"] = @"YES";
   }
 
   NSArray *layers = @[
